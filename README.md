@@ -94,6 +94,11 @@ NS=/path/to/ns ORIG_PRX=/path/to/thethug2mod.prx GAME=/path/to/Game ./install.sh
 
 MIT, see [LICENSE](LICENSE). Tony Hawk's Underground 2 belongs to Activision, THEMOD to its authors.
 
+### Credits
+
+Made with [Claude Opus 5.5](https://www.anthropic.com/claude) in Claude Code, following the
+[coop-anything](https://github.com/cranebeaker/coop-anything) playbook.
+
 ### Support
 
 Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
@@ -148,6 +153,11 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 ### Лицензия
 
 MIT, см. [LICENSE](LICENSE). Tony Hawk's Underground 2 принадлежит Activision, THEMOD — его авторам.
+
+### Благодарности
+
+Сделано под руководством [Claude Opus 5.5](https://www.anthropic.com/claude) в Claude Code, по методике
+[coop-anything](https://github.com/cranebeaker/coop-anything).
 
 ### Поддержка
 
