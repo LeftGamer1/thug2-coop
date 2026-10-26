@@ -94,9 +94,9 @@ Please attach `coop.log` from the game folder.
 
 ### Known issues
 
-- The game may crash on the splash screen. Probably Windows 11 or a 2K (2560x1440) resolution; not confirmed yet.
-  If it happens to you, please [open an issue](https://github.com/LeftGamer1/thug2-coop/issues) with your
-  Windows version, resolution and `coop.log`.
+- The game may crash on the splash screen at start (seen on Windows 11 and at 2K resolution). This isn't the mod:
+  plain THEMOD 1.3 does it too. Fix: run the game in a window - in `coop.ini`, section `[debug]`, set `windowed=1`
+  (the window is 640x480).
 
 ### Build
 
@@ -181,9 +181,9 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 
 ### Известные проблемы
 
-- Игра может вылетать на заставке при запуске. Вероятно, из-за Windows 11 или разрешения 2K (2560x1440),
-  точно пока не выяснено. Если у вас так — [напишите в Issues](https://github.com/LeftGamer1/thug2-coop/issues)
-  версию Windows, разрешение и приложите `coop.log`.
+- Игра может вылетать на заставке при запуске (встречается на Windows 11 и на разрешении 2K). Это не из-за мода:
+  так же вылетает и обычный THEMOD 1.3. Решение: запускать игру в окне - в `coop.ini`, раздел `[debug]`,
+  поставьте `windowed=1` (окно 640x480).
 
 ### Сборка
 

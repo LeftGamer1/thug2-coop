@@ -35,7 +35,8 @@ SETTINGS (coop.ini)
                     F1-F24, A-Z, 0-9, Num0-Num9, Insert, Delete, Home, End, PageUp, PageDown, Pause,
                     ScrollLock, with Ctrl+ / Shift+ / Alt+ in front if you like (Ctrl+F10); none: no key.
                     Avoid F1-F4 (taunts) and Enter (chat).
-  The [debug] section is for debugging, leave it alone.
+  [debug] windowed=1 - the game in a 640x480 window (if it crashes on the splash screen, see IF IT DOESN'T WORK).
+                    The rest of [debug] is for debugging, leave it alone.
 
 HOW TO PLAY
 -----------
@@ -83,6 +84,8 @@ LIMITS
 
 IF IT DOESN'T WORK
 ------------------
+  - The game crashes on the splash screen (Windows 11, 2K resolution): not the mod, plain THEMOD 1.3 does it
+    too. Run it in a window: in coop.ini, section [debug], set windowed=1 (a 640x480 window).
   - The game crashes right at start: keep the game folder on a path in Latin letters, not in OneDrive or
     Program Files. Before unpacking: the zip's Properties -> "Unblock". Check that Defender didn't remove
     dinput8.dll. Check that the game starts without dinput8.dll - if not, it isn't the mod.
