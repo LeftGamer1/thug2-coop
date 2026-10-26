@@ -6,12 +6,15 @@ save), the friend joins the host's game and skates alongside in the same level, 
 
 INSTALL (both players)
 ----------------------
-The game folder is the one with "THEMOD 1.3.exe" (usually ...\Tony Hawk's Underground 2\Game).
-  1. Keep a copy of your Data\pre\thethug2mod.prx somewhere (THEMOD's original).
-  2. Copy from the archive:
-       dinput8.dll               -> the game folder
-       coop.ini                  -> the game folder
-       Data\pre\thethug2mod.prx  -> Data\pre\ (replace)
+The game folder is the one with THUG2.exe (usually ...\Tony Hawk's Underground 2\Game).
+The mod runs on top of THEMOD 1.3; it doesn't have to be installed first - the archive has everything for it.
+  1. Have THEMOD already? Keep a copy of your Data\pre\thethug2mod.prx somewhere.
+  2. Copy from the archive into the game folder (replace):
+       dinput8.dll, coop.ini, patch_themod.bat, patch_themod.ps1
+       Data\pre\thethug2mod.prx  -> Data\pre\
+     No "THEMOD 1.3.exe"? Run patch_themod.bat: it makes it from your THUG2.exe (THUG2.exe stays as it is).
+     That's what THEMOD 1.3's installer does, and the installer can't be found anywhere now.
+     Start the game with "THEMOD 1.3.exe".
   3. In coop.ini set name= (both) and host_address= (the friend only), see SETTINGS below.
   4. Network: the host needs UDP 5153 (the game) and TCP 5154 (story sync) reachable.
      Easiest: Radmin VPN / ZeroTier on both PCs, host_address = the host's IP in that network.
@@ -85,7 +88,8 @@ IF IT DOESN'T WORK
     dinput8.dll. Check that the game starts without dinput8.dll - if not, it isn't the mod.
   - The friend presses F11 and nothing happens: check host_address and that the host's UDP 5153 and TCP 5154
     are reachable (in Porthole: both ports shared and accepted).
-  - 1920x1080: THEMOD put 1920x1080 in place of 800x600 - pick "Medium (800x600)" in Launcher.exe.
+  - 1920x1080: some copies of "THEMOD 1.3.exe" have 1920x1080 in place of
+    800x600 - pick "Medium (800x600)" in Launcher.exe.
   - Music or sound gone: the volume is kept in the save. Set it in Options and save.
 
 TURN THE MOD OFF

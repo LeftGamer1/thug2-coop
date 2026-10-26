@@ -56,17 +56,22 @@ NPCs, cutscenes, goals.
 
 ### Install
 
-You need Tony Hawk's Underground 2 for PC with **THEMOD 1.3** installed (not included here). Both players install the mod.
+You need Tony Hawk's Underground 2 for PC. Both players install the mod. THEMOD 1.3 doesn't have to be installed:
+the archive has everything for it.
 
-> **About THEMOD 1.3.** I couldn't find its author or anywhere to download it. The only trace is credit to
-> "TH Mods" (thmods.com, now gone). If you know the author, a download link or other resources, please
+> **About THEMOD 1.3.** The co-op is built on THEMOD 1.3, and the patcher reproduces its installer. I couldn't find
+> THEMOD's author or anywhere to download it (its site thmods.com is gone), so we made our own patcher: it turns
+> your own `THUG2.exe` into `THEMOD 1.3.exe` (the same 126 bytes THEMOD's installer changes), and THEMOD's
+> `thethug2mod.prx` comes in the archive. If you know the author, a download link or other resources, please
 > [open an issue](https://github.com/LeftGamer1/thug2-coop/issues).
 
 1. Download `thug2-coop.zip` from [Releases](https://github.com/LeftGamer1/thug2-coop/releases).
-2. Keep a copy of your `Data\pre\thethug2mod.prx` (THEMOD's original).
-3. Unpack the archive into the game folder (the one with `THEMOD 1.3.exe`), replacing files.
-4. In `coop.ini` set `name=` (both) and `host_address=` (the friend only).
-5. The host's UDP 5153 and TCP 5154 must be reachable (Radmin VPN / ZeroTier / Porthole).
+2. If you have THEMOD already, keep a copy of your `Data\pre\thethug2mod.prx`.
+3. Unpack the archive into the game folder (the one with `THUG2.exe`), replacing files.
+4. No `THEMOD 1.3.exe` there? Run `patch_themod.bat`: it makes it from `THUG2.exe` (which stays as it is).
+   Start the game with `THEMOD 1.3.exe`.
+5. In `coop.ini` set `name=` (both) and `host_address=` (the friend only).
+6. The host's UDP 5153 and TCP 5154 must be reachable (Radmin VPN / ZeroTier / Porthole).
 
 Details: [README_EN.txt](README_EN.txt) (settings, controls, limits, troubleshooting).
 
@@ -84,6 +89,7 @@ The keys can be changed in `coop.ini`, section `[keys]`.
 ### Build
 
 - `src/`: `dinput8.dll` (a proxy that patches the game at load time), C++17, MinGW i686.
+- `patcher/`: `patch_themod.bat` / `.ps1`, makes `THEMOD 1.3.exe` from `THUG2.exe`.
 - `qb/coop.ns`: game scripts in [NeverScript](https://github.com/byxor/NeverScript), compiled to `coop.qb`
   and added to THEMOD's `thethug2mod.prx`.
 
@@ -125,17 +131,22 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 
 ### Установка
 
-Нужны: Tony Hawk's Underground 2 для PC и установленный **THEMOD 1.3** (в репозиторий не входит). Мод ставят оба игрока.
+Нужна Tony Hawk's Underground 2 для PC. Мод ставят оба игрока. Ставить THEMOD 1.3 заранее не нужно:
+всё для него есть в архиве.
 
-> **Про THEMOD 1.3.** Я не нашёл ни его автора, ни где его скачать. Единственный след — упоминание
-> «TH Mods» (сайт thmods.com больше не работает). Если знаете автора, ссылку на скачивание или другие ресурсы —
+> **Про THEMOD 1.3.** Кооператив сделан на основе THEMOD 1.3, и патчер повторяет его установщик. Мы не нашли ни
+> автора THEMOD, ни где его скачать (его сайт thmods.com больше не работает), поэтому решили сделать свой патчер:
+> он превращает ваш `THUG2.exe` в `THEMOD 1.3.exe` (те же 126 байт, что меняет установщик THEMOD), а
+> `thethug2mod.prx` от THEMOD лежит в архиве. Если знаете автора, ссылку на скачивание или другие ресурсы —
 > [напишите в Issues](https://github.com/LeftGamer1/thug2-coop/issues).
 
 1. Скачайте `thug2-coop.zip` из [Releases](https://github.com/LeftGamer1/thug2-coop/releases).
-2. Сохраните свой `Data\pre\thethug2mod.prx` (оригинал THEMOD).
-3. Распакуйте архив в папку игры (где лежит `THEMOD 1.3.exe`) с заменой.
-4. В `coop.ini` впишите `name=` (оба) и `host_address=` (только друг).
-5. У хоста должны быть доступны UDP 5153 и TCP 5154 (Radmin VPN / ZeroTier / Porthole).
+2. Если THEMOD уже стоит — сохраните свой `Data\pre\thethug2mod.prx`.
+3. Распакуйте архив в папку игры (где лежит `THUG2.exe`) с заменой.
+4. Нет `THEMOD 1.3.exe`? Запустите `patch_themod.bat`: он сделает его из `THUG2.exe` (сам `THUG2.exe` не меняется).
+   Игру запускайте через `THEMOD 1.3.exe`.
+5. В `coop.ini` впишите `name=` (оба) и `host_address=` (только друг).
+6. У хоста должны быть доступны UDP 5153 и TCP 5154 (Radmin VPN / ZeroTier / Porthole).
 
 Подробно — в [README_RU.txt](README_RU.txt): настройки, управление, ограничения, решение проблем.
 
@@ -153,6 +164,7 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 ### Сборка
 
 - `src/` — `dinput8.dll` (прокси, патчит игру при загрузке), C++17, MinGW i686.
+- `patcher/` — `patch_themod.bat` / `.ps1`, делает `THEMOD 1.3.exe` из `THUG2.exe`.
 - `qb/coop.ns` — скрипты игры на [NeverScript](https://github.com/byxor/NeverScript), компилируются в `coop.qb`
   и добавляются в `thethug2mod.prx` THEMOD.
 
