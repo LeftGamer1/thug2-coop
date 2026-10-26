@@ -91,8 +91,9 @@ IF IT DOESN'T WORK
     dinput8.dll. Check that the game starts without dinput8.dll - if not, it isn't the mod.
   - The friend presses F11 and nothing happens: check host_address and that the host's UDP 5153 and TCP 5154
     are reachable (in Porthole: both ports shared and accepted).
-  - 1920x1080: some copies of "THEMOD 1.3.exe" have 1920x1080 in place of
-    800x600 - pick "Medium (800x600)" in Launcher.exe.
+  - 1920x1080: in Launcher.exe pick "Medium (800x600)". Some copies of "THEMOD 1.3.exe" going around have
+    1920x1080 in place of 800x600, so that item gives 1920x1080. (The one patch_themod.bat makes is THEMOD's
+    original: there 800x600 is 800x600.)
   - Music or sound gone: the volume is kept in the save. Set it in Options and save.
 
 TURN THE MOD OFF

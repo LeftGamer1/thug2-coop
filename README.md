@@ -98,6 +98,10 @@ Please attach `coop.log` from the game folder.
   plain THEMOD 1.3 does it too. Fix: run the game in a window - in `coop.ini`, section `[debug]`, set `windowed=1`
   (the window is 640x480).
 
+- 1920x1080: in `Launcher.exe` pick **Medium (800x600)**. Some copies of `THEMOD 1.3.exe` going around have
+  1920x1080 in place of 800x600, so that item gives 1920x1080. (The one `patch_themod.bat` makes is THEMOD's
+  original: there 800x600 is 800x600.)
+
 ### Build
 
 - `src/`: `dinput8.dll` (a proxy that patches the game at load time), C++17, MinGW i686.
@@ -184,6 +188,10 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 - Игра может вылетать на заставке при запуске (встречается на Windows 11 и на разрешении 2K). Это не из-за мода:
   так же вылетает и обычный THEMOD 1.3. Решение: запускать игру в окне - в `coop.ini`, раздел `[debug]`,
   поставьте `windowed=1` (окно 640x480).
+
+- Разрешение 1920x1080: в `Launcher.exe` выберите **Medium (800x600)**. В некоторых копиях `THEMOD 1.3.exe`
+  800x600 заменено на 1920x1080, и этот пункт даёт 1920x1080. (В копии, которую делает `patch_themod.bat`, —
+  оригинал THEMOD, там 800x600 так и остаётся 800x600.)
 
 ### Сборка
 
