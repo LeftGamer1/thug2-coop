@@ -5,6 +5,8 @@
 
 *English: see [README_EN.txt](README_EN.txt).*
 
+💸 [Отблагодарить автора](https://www.donationalerts.com/r/leftgamerr)
+
 ## Что умеет
 
 - Друг получает сюжет хоста (главы, выполненные цели, флаги мира) при входе и при каждой смене уровня.
@@ -84,3 +86,7 @@ NS=/path/to/ns ORIG_PRX=/path/to/thethug2mod.prx GAME=/path/to/Game ./install.sh
 ## Лицензия
 
 MIT, см. [LICENSE](LICENSE). Tony Hawk's Underground 2 принадлежит Activision, THEMOD — его авторам.
+
+## Поддержка
+
+Понравился мод? [Отблагодарить автора](https://www.donationalerts.com/r/leftgamerr)
