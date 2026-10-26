@@ -86,6 +86,18 @@ Details: [README_EN.txt](README_EN.txt) (settings, controls, limits, troubleshoo
 
 The keys can be changed in `coop.ini`, section `[keys]`.
 
+### Help wanted
+
+I don't have much time to test the co-op through and through, so not everything may work 100%.
+You can help: play it and report bugs or anything odd in [Issues](https://github.com/LeftGamer1/thug2-coop/issues).
+Please attach `coop.log` from the game folder.
+
+### Known issues
+
+- The game may crash on the splash screen. Probably Windows 11 or a 2K (2560x1440) resolution; not confirmed yet.
+  If it happens to you, please [open an issue](https://github.com/LeftGamer1/thug2-coop/issues) with your
+  Windows version, resolution and `coop.log`.
+
 ### Build
 
 - `src/`: `dinput8.dll` (a proxy that patches the game at load time), C++17, MinGW i686.
@@ -160,6 +172,18 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 | Enter | чат |
 
 Клавиши меняются в `coop.ini`, раздел `[keys]`.
+
+### Нужна помощь
+
+У меня мало времени, чтобы проверить кооператив на 100%, так что что-то может работать не так.
+Вы можете помочь: играйте и пишите о багах и странностях в [Issues](https://github.com/LeftGamer1/thug2-coop/issues).
+Приложите `coop.log` из папки игры.
+
+### Известные проблемы
+
+- Игра может вылетать на заставке при запуске. Вероятно, из-за Windows 11 или разрешения 2K (2560x1440),
+  точно пока не выяснено. Если у вас так — [напишите в Issues](https://github.com/LeftGamer1/thug2-coop/issues)
+  версию Windows, разрешение и приложите `coop.log`.
 
 ### Сборка
 
