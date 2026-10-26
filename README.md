@@ -58,6 +58,10 @@ NPCs, cutscenes, goals.
 
 You need Tony Hawk's Underground 2 for PC with **THEMOD 1.3** installed (not included here). Both players install the mod.
 
+> **About THEMOD 1.3.** I couldn't find its author or anywhere to download it. The only trace is credit to
+> "TH Mods" (thmods.com, now gone). If you know the author, a download link or other resources, please
+> [open an issue](https://github.com/LeftGamer1/thug2-coop/issues).
+
 1. Download `thug2-coop.zip` from [Releases](https://github.com/LeftGamer1/thug2-coop/releases).
 2. Keep a copy of your `Data\pre\thethug2mod.prx` (THEMOD's original).
 3. Unpack the archive into the game folder (the one with `THEMOD 1.3.exe`), replacing files.
@@ -122,6 +126,10 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 ### Установка
 
 Нужны: Tony Hawk's Underground 2 для PC и установленный **THEMOD 1.3** (в репозиторий не входит). Мод ставят оба игрока.
+
+> **Про THEMOD 1.3.** Я не нашёл ни его автора, ни где его скачать. Единственный след — упоминание
+> «TH Mods» (сайт thmods.com больше не работает). Если знаете автора, ссылку на скачивание или другие ресурсы —
+> [напишите в Issues](https://github.com/LeftGamer1/thug2-coop/issues).
 
 1. Скачайте `thug2-coop.zip` из [Releases](https://github.com/LeftGamer1/thug2-coop/releases).
 2. Сохраните свой `Data\pre\thethug2mod.prx` (оригинал THEMOD).
