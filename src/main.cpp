@@ -1,5 +1,6 @@
 // THUG2 story co-op: dinput8.dll proxy that patches the game at load time.
 // F10 (host) and F11 (join; the keys are set in coop.ini's [keys]) start the co-op scripts in coop.qb; the script functions below are the bridge.
+#include <algorithm>
 #include <cstdarg>
 #include <cctype>
 #include <cmath>
@@ -58,6 +59,8 @@ struct Settings {
     int joinKey = VK_F11;
     int teleportKey = VK_F12;
     int playerCollision = -1; // skaters knock each other down: 1 on, 0 off, -1 the game's network option
+    int screenWidth = 1920;   // [display] resolution; 0: Launcher.exe's choice
+    int screenHeight = 1080;
 } g_settings;
 
 // The modifier bits of a key setting (above the virtual key code).
@@ -147,6 +150,17 @@ void LoadSettings()
     g_settings.hostKey = KeySetting("host", VK_F10, path);
     g_settings.joinKey = KeySetting("join", VK_F11, path);
     g_settings.teleportKey = KeySetting("teleport", VK_F12, path);
+    char resolution[32];
+    GetPrivateProfileStringA("display", "resolution", "1920x1080", resolution, sizeof(resolution), path);
+    int width = 0, height = 0;
+    char x = 0;
+    if (std::sscanf(resolution, " %d %c %d", &width, &x, &height) == 3 && (x == 'x' || x == 'X' || x == '*') &&
+        width >= 320 && width <= 7680 && height >= 240 && height <= 4320) {
+        g_settings.screenWidth = width;
+        g_settings.screenHeight = height;
+    } else {
+        g_settings.screenWidth = g_settings.screenHeight = 0; // "launcher", empty or not understood
+    }
 }
 
 // --- co-op state ----------------------------------------------------------------------------------------------
@@ -1964,6 +1978,27 @@ HANDLE WINAPI SharedCreateFile(LPCSTR name, DWORD access, DWORD share, LPSECURIT
     return g_createFile(name, access, share, sa, disposition, flags, templ);
 }
 
+// [display] resolution: the device setup (0x004D870B) picks one of 4 modes (1280x1024 ... 640x480) by
+// Launcher.exe's setting; it always takes the last one here, and that one gets the resolution from coop.ini.
+void ApplyResolution()
+{
+    if (!g_settings.screenWidth)
+        return;
+    const uint8_t select[] = {0xBE, 0x03, 0x00, 0x00, 0x00, 0x2B, 0xF2};        // mov esi,3; sub esi,[setting]
+    const uint8_t width[] = {0xC7, 0x44, 0x24, 0x38, 0x80, 0x02, 0x00, 0x00};  // mov [esp+38h],640
+    const uint8_t height[] = {0xC7, 0x44, 0x24, 0x28, 0xE0, 0x01, 0x00, 0x00}; // mov [esp+28h],480
+    if (!patch::Matches(0x004D870B, select, sizeof(select)) || !patch::Matches(0x004D8772, width, sizeof(width)) ||
+        !patch::Matches(0x004D878E, height, sizeof(height))) {
+        Log("resolution: unexpected bytes, Launcher.exe's is used");
+        return;
+    }
+    const uint8_t nops[2] = {0x90, 0x90};
+    patch::Write(0x004D8710, nops, 2);
+    patch::WriteU32(0x004D8776, static_cast<uint32_t>(g_settings.screenWidth));
+    patch::WriteU32(0x004D8792, static_cast<uint32_t>(g_settings.screenHeight));
+    Log("resolution %dx%d", g_settings.screenWidth, g_settings.screenHeight);
+}
+
 void ApplyDebugPatches()
 {
     // The same bytes as the old THUG2_coop_test.exe, for running two windows on one PC.
@@ -1977,10 +2012,35 @@ void ApplyDebugPatches()
             patch::Write(0x005F58D3, nops, 6);
             Log("debug: windowed");
         }
-        const uint8_t resolution[] = {0xBE, 0x03, 0x00, 0x00, 0x00, 0x2B, 0xF2}; // mov esi,3; sub esi,[setting]
-        if (patch::Matches(0x004D870B, resolution, sizeof(resolution))) {
-            const uint8_t nops[2] = {0x90, 0x90}; // always the last of the 4 modes: 640x480, whatever the launcher set
-            patch::Write(0x004D8710, nops, 2);
+        // The window (made 640x480 at 100,100 in WinMain): the resolution's size, centred; scaled down to fit the
+        // screen's work area if it doesn't (the picture keeps its resolution, Direct3D stretches it to the window).
+        const uint8_t makeWindow[] = {0x68, 0xE0, 0x01, 0x00, 0x00, 0x68, 0x80, 0x02, 0x00, 0x00, 0x6A, 0x64, 0x6A, 0x64};
+        if (g_settings.screenWidth && patch::Matches(0x004E274C, makeWindow, sizeof(makeWindow))) {
+            int width = g_settings.screenWidth, height = g_settings.screenHeight;
+            RECT area = {0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN)};
+            SystemParametersInfoA(SPI_GETWORKAREA, 0, &area, 0);
+            RECT frame = {0, 0, width, height};
+            AdjustWindowRect(&frame, WS_POPUP | WS_CAPTION | WS_SYSMENU, FALSE);
+            const int roomX = (area.right - area.left) - (frame.right - frame.left - width);
+            const int roomY = (area.bottom - area.top) - (frame.bottom - frame.top - height);
+            if (width > roomX || height > roomY) {
+                const double scale = std::min(static_cast<double>(roomX) / width, static_cast<double>(roomY) / height);
+                width = static_cast<int>(width * scale);
+                height = static_cast<int>(height * scale);
+            }
+            patch::WriteU32(0x004E274D, static_cast<uint32_t>(height));
+            patch::WriteU32(0x004E2752, static_cast<uint32_t>(width));
+            const uint8_t centred[4] = {0x6A, 0xFF, 0x6A, 0xFF}; // x, y -1: centred
+            patch::Write(0x004E2756, centred, 4);
+            // After the device is made, SetWindowPos(0, 0, the back buffer's size) would put the frame at the corner
+            // and the inside smaller: the window stays as made (as PartyMod does).
+            const uint8_t moveWindow[] = {0x6A, 0x04, 0x50, 0x51, 0x53, 0x53, 0x53, 0x52, 0xFF, 0x15, 0x20, 0x52, 0x64, 0x00};
+            if (patch::Matches(0x004D8891, moveWindow, sizeof(moveWindow))) {
+                uint8_t nops[sizeof(moveWindow)];
+                std::memset(nops, 0x90, sizeof(nops));
+                patch::Write(0x004D8891, nops, sizeof(nops));
+            }
+            Log("debug: window %dx%d", width, height);
         }
     }
     if (g_settings.multiInstance) {
@@ -2098,6 +2158,7 @@ bool Install()
         Log("component guard: unexpected bytes");
     if (g_settings.name[0]) // the player's network name (as -NAME on the command line): shown over their skater
         std::memcpy(reinterpret_cast<void*>(0x007CCBC4), g_settings.name, sizeof(g_settings.name));
+    ApplyResolution();
     ApplyDebugPatches();
     Log("installed (host %s:%d; keys host %X join %X teleport %X)", g_settings.hostAddress, g_settings.port,
         g_settings.hostKey, g_settings.joinKey, g_settings.teleportKey);

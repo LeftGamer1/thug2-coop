@@ -35,7 +35,10 @@ SETTINGS (coop.ini)
                     F1-F24, A-Z, 0-9, Num0-Num9, Insert, Delete, Home, End, PageUp, PageDown, Pause,
                     ScrollLock, with Ctrl+ / Shift+ / Alt+ in front if you like (Ctrl+F10); none: no key.
                     Avoid F1-F4 (taunts) and Enter (chat).
-  [debug] windowed=1 - the game in a 640x480 window (if it crashes on the splash screen, see IF IT DOESN'T WORK).
+  [display] resolution=1920x1080 - the game's resolution (2560x1440, 1280x720...); in full screen your monitor
+                    must support it. launcher: the one picked in Launcher.exe.
+  [debug] windowed=1 - the game in a window of that resolution (a window too big for the screen is made smaller,
+                    the picture keeps its resolution). Helps if the game crashes on the splash screen.
                     The rest of [debug] is for debugging, leave it alone.
 
 HOW TO PLAY
@@ -85,15 +88,14 @@ LIMITS
 IF IT DOESN'T WORK
 ------------------
   - The game crashes on the splash screen (Windows 11, 2K resolution): not the mod, plain THEMOD 1.3 does it
-    too. Run it in a window: in coop.ini, section [debug], set windowed=1 (a 640x480 window).
+    too. Run it in a window: in coop.ini, section [debug], set windowed=1.
   - The game crashes right at start: keep the game folder on a path in Latin letters, not in OneDrive or
     Program Files. Before unpacking: the zip's Properties -> "Unblock". Check that Defender didn't remove
     dinput8.dll. Check that the game starts without dinput8.dll - if not, it isn't the mod.
   - The friend presses F11 and nothing happens: check host_address and that the host's UDP 5153 and TCP 5154
     are reachable (in Porthole: both ports shared and accepted).
-  - 1920x1080: in Launcher.exe pick "Medium (800x600)". Some copies of "THEMOD 1.3.exe" going around have
-    1920x1080 in place of 800x600, so that item gives 1920x1080. (The one patch_themod.bat makes is THEMOD's
-    original: there 800x600 is 800x600.)
+  - Wrong resolution, or the game closes right after the splash screen: put your monitor's resolution in coop.ini,
+    section [display], resolution= (1920x1080 by default). The mod doesn't use Launcher.exe's choice.
   - Music or sound gone: the volume is kept in the save. Set it in Options and save.
 
 TURN THE MOD OFF
