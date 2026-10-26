@@ -1,0 +1,1561 @@
+script coop_lobby_open_message {
+    wait 2 gameframes
+    <frames> = 0
+    while {
+        if (is_changing_levels = 0) {
+            break
+        }
+        <frames> = (<frames> + 1)
+        if (<frames> > 600) {
+            break
+        }
+        wait 1 gameframe
+    }
+    wait 20 gameframes
+    coop_message text="Co-op lobby open: friend can join, then start Story"
+}
+script coop_message {
+    create_panel_message id=coop_status_msg text=<text> pos=(320.0, 80.0)
+}
+script coop_host_start {
+    if CoopIsActive {
+        coop_message text="Co-op is already running"
+    } else {
+        coop_in_story = 0
+        if GameModeEquals is_career {
+            if ! LevelIs Load_MainMenu {
+                coop_in_story = 1
+            }
+        }
+        if (<coop_in_story> = 0) {
+            if LevelIs Load_MainMenu {
+                CoopSetRole 1
+                coop_apply_name
+                CoopLog "host: lobby open"
+                cleanup preserve_skaters
+                chosen_leave_server
+                FlushDeadObjects
+                InitSkaterHeaps
+                SetNetworkMode LAN_MODE
+                setservermode on
+                StartServer
+                SetJoinMode JOIN_MODE_PLAY
+                JoinServer
+                while {
+                    if JoinServerComplete {
+                        break
+                    } else {
+                        wait 1
+                    }
+                }
+                change_level level=Load_MainMenu
+                CoopLog "host: lobby server up"
+                coop_lobby_open_message
+            } else {
+                coop_message text="Co-op: start Story mode first, then open co-op again"
+            }
+        } else {
+            coop_apply_name
+            CoopLog "host: start"
+            coop_message text="Co-op: hosting..."
+            GetCurrentLevel
+            coop_level = <level>
+            CoopSetRole 1
+            GoalManager_DeactivateAllGoals
+            goalmanager_levelunload
+            skater:ResetSkaterToCustom
+            cleanup preserve_skaters
+            chosen_leave_server
+            FlushDeadObjects
+            InitSkaterHeaps
+            SetGameType career
+            SetCurrentGameType
+            SetNetworkMode LAN_MODE
+            setservermode on
+            StartServer
+            SetJoinMode JOIN_MODE_PLAY
+            JoinServer
+            while {
+                if JoinServerComplete {
+                    break
+                } else {
+                    wait 1
+                }
+            }
+            CoopLog "host: server up, reloading level"
+            change_level level=<coop_level>
+        }
+    }
+}
+script coop_join_start {
+    if CoopIsActive {
+        coop_message text="Co-op is already running"
+    } else {
+        coop_apply_name
+        CoopLog "client: start"
+        coop_message text="Co-op: connecting to the host..."
+        CoopSetRole 2
+        if ! CoopConnect {
+            coop_message text="Co-op: can't reach the host (check host_address in coop.ini)"
+            CoopSetRole 0
+        } else {
+            coop_message text="Co-op: connected - waiting for the host to start the story"
+            while {
+                if CoopShouldJoin {
+                    break
+                }
+                if ! CoopLinkUp {
+                    break
+                }
+                wait 1 gameframe
+            }
+            if ! CoopShouldJoin {
+                coop_message text="Co-op: the host closed the connection"
+                CoopSetRole 0
+            } else {
+                coop_message text="Co-op: joining..."
+                GoalManager_DeactivateAllGoals
+                goalmanager_levelunload
+                cleanup preserve_skaters
+                chosen_leave_server
+                FlushDeadObjects
+                InitSkaterHeaps
+                SetGameType career
+                SetCurrentGameType
+                SetNetworkMode LAN_MODE
+                setservermode off
+                SetJoinMode JOIN_MODE_PLAY
+                CoopJoin
+                CoopLog "client: join sent"
+            }
+        }
+    }
+}
+script coop_play_cutscene {
+    PlayCutscene <...>
+}
+coop_debug_peds = [TRG_Tony_Advance TRG_SkitchATVDriver TRG_RodneySkate_01 TRG_MikeSkate_01 TRG_BobSkate_01 TRG_EricSkate_01 TRG_BamSkate_01 TRG_MuskaSkate_01 TRG_G_COUNTER_PRO TRG_g_ped_counter6]
+script coop_debug_f9 {
+    GetArraySize coop_debug_peds
+    index = 0
+    found = 0
+    while {
+        ped = (coop_debug_peds [<index>])
+        if ObjectExists id=<ped> {
+            FormatText TextName=msg "debug: ped %i exists" i=<index>
+            CoopLog <msg>
+            if (<found> = 2) {
+                found = 1
+                if SwapObjectModels obj_1=skater obj_2=<ped> {
+                    FormatText TextName=msg "debug: swapped with ped %i" i=<index>
+                    CoopLog <msg>
+                }
+            }
+        } else {
+            FormatText TextName=msg "debug: ped %i missing" i=<index>
+            CoopLog <msg>
+        }
+        index = (<index> + 1)
+    } <array_size>
+}
+script coop_debug_f8 {
+    CoopLog "debug: win TR_Goal_Gaps27"
+    GoalManager_WinGoal name=TR_Goal_Gaps27
+}
+script coop_client_save_refused {
+    coop_message text="Co-op: story progress is saved by the host"
+}
+script coop_teleport_request {
+    if GoalManager_HasActiveGoals {
+        coop_message text="Co-op: no teleport during a goal"
+        return
+    }
+    if ! CoopTeleportToFriend {
+        coop_message text="Co-op: no friend in the level"
+    }
+    wait 2 gameframes
+    CoopLogPositions
+}
+script coop_debug_pos {
+    CoopLogPositions
+}
+script coop_friend_label {
+    if ScreenElementExists id=coop_friend_name {
+        SetScreenElementProps id=coop_friend_name text=<text> pos=<pos>
+    } else {
+        SetScreenElementLock id=root_window OFF
+        CreateScreenElement {
+            Type=TextElement
+            parent=root_window
+            id=coop_friend_name
+            font=small
+            text=<text>
+            pos=<pos>
+            just=[center bottom]
+            scale=0.9
+            rgba=[90 170 255 100]
+            z_priority=3
+        }
+    }
+}
+script coop_debug_points {
+    GoalManager_GetActiveRewardPoints
+    FormatText TextName=msg "debug: active=%a total=%t cheat=%c" a=<active_points> t=<total_points> c=total_cheat_points
+    CoopLog <msg>
+}
+
+script select_pro_menu_choose {
+    if CoopIsActive {
+        if CoopIsHost {
+            CoopSendSpawn call=coop_remote_select_pro params={<...>}
+        } else {
+            if ! CoopIsRemote {
+                coop_message text="Co-op: the host picks the teammate"
+                return
+            }
+        }
+    }
+    coop_orig_select_pro_menu_choose <...>
+}
+script coop_remote_select_pro {
+    if ScreenElementExists id=current_menu_anchor {
+        DestroyScreenElement id=current_menu_anchor
+    }
+    select_pro_menu_choose <...>
+}
+script coop_orig_select_pro_menu_choose {
+    if ! GotParam teammate_pro_appearance_name {
+        script_assert "no teammate pro appearance name specified in skater profile!"
+    }
+    if ! ChecksumEquals a=(skater_swapping_teammate_name) b=None {
+        SetSwappedSkaterName profile_name=<name>
+        RefreshSwappedSkaterData
+    }
+    change skater_swapping_teammate_name=<name>
+    if MemHeapExists name=TeammatePro {
+        mempushcontext TeammatePro
+        <swappable_pro_name> = TRG_Ped_TeammatePro
+        if CompositeObjectExists name=<swappable_pro_name> {
+            if GetSkaterModelIsSwapped {
+                <skater_swapped> = 1
+            } else {
+                <skater_swapped> = 0
+            }
+            if (<skater_swapped> = 1) {
+                SwapObjectModels obj_1=skater obj_2=<swappable_pro_name>
+            }
+            <swappable_pro_name>:Obj_ClearGeoms
+            <swappable_pro_name>:Obj_ShadowOff
+            <swappable_pro_name>:Obj_InitModelFromProfile {
+                texDictOffset=800
+                use_asset_manager=0
+                struct=<teammate_pro_appearance_name>
+                buildscript=create_ped_model_from_appearance
+            }
+            <swappable_pro_name>:Obj_ResetNoSuspendCount
+            if (<skater_swapped> = 1) {
+                SwapObjectModels obj_1=skater obj_2=<swappable_pro_name>
+            }
+        } else {
+            printf "Couldn't find teammate pro to switch"
+        }
+        mempopcontext
+    } else {
+        script_assert "Where's the teammate pro heap?"
+    }
+    if GoalManager_GoalIsActive name=BO_Goal_Gaps7 {
+        skater:remove_all_anim_subsets
+        GoalManager_LoseGoal name=BO_Goal_Gaps7
+    }
+    SafeCallback <...> mark_first_input
+}
+
+script create_select_pro_menu {
+    if CoopIsActive {
+        if ! CoopIsHost {
+            GetChapterSelectableProCount
+            if (<selectable_pro_count> > 1) {
+                coop_message text="Co-op: waiting for the host to pick the teammate..."
+                return
+            }
+        }
+    }
+    coop_orig_create_select_pro_menu <...>
+}
+script coop_orig_create_select_pro_menu {
+    if GotParam from_chapter_intro {
+        callback = StartCurrentChapterWelcome
+    } else {
+        callback = exit_pause_menu
+    }
+    GetCurrentChapterInfo
+    if ! LevelIs <level> {
+        SafeCallback <...>
+        return
+    }
+    if ! GotParam selectable_pros {
+        printf "No pro list found!"
+        SetCurrentTeammateProAppearanceName
+        SafeCallback <...>
+        return
+    }
+    GetArraySize <selectable_pros>
+    if (<array_size> = 0) {
+        printf "Empty pro list - setting to null"
+        SafeCallback <...>
+        return
+    } else {
+        if (<array_size> = 1) {
+            printf "Setting only pro found"
+            SetCurrentTeammateProAppearanceName pro=(<selectable_pros> [0])
+            SafeCallback <...>
+            return
+        }
+    }
+    if GotParam from_chapter_intro {
+        SetUpChapterMenu
+        pad_back = nullscript
+        helpers = generic_helper_text_no_back
+    } else {
+        pad_back = generic_menu_pad_back
+        helpers = generic_helper_text
+    }
+    make_new_roundbar_menu {
+        title="SELECT PRO TEAMMATE"
+        pad_back_script=<pad_back>
+        pad_back_params={callback=<callback>}
+        helper_text=<helpers>
+        additional_focus_script=focus_stats_display
+        additional_unfocus_script=unfocus_stats_display
+    }
+    pause_menu_gradient
+    index = 0
+    while {
+        FormatText ChecksumName=item "menu_item_%i" i=<index>
+        GetSkaterProfileInfoByName name=(<selectable_pros> [<index>])
+        add_roundbar_menu_item {text=<display_name>
+            id=<item>
+            pad_choose_script=select_pro_menu_choose
+            pad_choose_params={pro=(<selectable_pros> [<index>]) <...>}
+            mark_first_input
+        }
+        <item>:SetTags name=(<selectable_pros> [<index>])
+        <index> = (<index> + 1)
+    } <array_size>
+    roundbar_menu_finish
+}
+
+script coop_debug_introcams {
+    CoopLog "debug: intro cams start"
+    GetCurrentChapterInfo
+    PlayIntroCameras <...>
+    CoopLog "debug: intro cams done"
+}
+script coop_friend_label_hide {
+    if ScreenElementExists id=coop_friend_name {
+        DestroyScreenElement id=coop_friend_name
+    }
+}
+coop_cam_frozen = 0
+script coop_play_cam_anim {
+    if GoalManager_HasActiveGoals {
+        return
+    }
+    PlaySkaterCamAnim <...>
+    coop_cam_freeze
+}
+script coop_cam_freeze {
+    if (coop_cam_frozen = 1) {
+        if ! GotParam again {
+            return
+        }
+    }
+    if ! GoalManager_HasActiveGoals {
+        skater:PausePhysics
+        hide_all_hud_items dont_restore_input
+    }
+    if (coop_cam_frozen = 0) {
+        change coop_cam_frozen = 1
+        SpawnScript coop_cam_freeze_watch
+    }
+}
+script coop_cam_freeze_watch {
+    idle = 0
+    while {
+        wait 1 gameframe
+        if SkaterCamAnimFinished {
+            idle = (<idle> + 1)
+        } else {
+            idle = 0
+        }
+        if (coop_intro_held = 1) {
+            if (<idle> > 900) {
+                change coop_intro_held = 0
+            }
+        } else {
+            if (<idle> > 30) {
+                break
+            }
+        }
+    }
+    coop_cam_unfreeze
+}
+coop_intro_held = 0
+script coop_intro_hold {
+    change coop_intro_held = 1
+    coop_cam_freeze again
+}
+script coop_remote_intro_begin {
+    coop_intro_hold
+    if GotParam letterbox {
+        fake_letterboxing
+    }
+}
+script coop_remote_intro_end {
+    change coop_intro_held = 0
+}
+script coop_cam_unfreeze {
+    if (coop_cam_frozen = 0) {
+        return
+    }
+    change coop_cam_frozen = 0
+    if ScreenElementExists id=intro_panel {
+        DestroyScreenElement id=intro_panel
+    }
+    if ScreenElementExists id=coop_cam_text_anchor {
+        DestroyScreenElement id=coop_cam_text_anchor
+    }
+    fake_letterboxing remove
+    skater:UnpausePhysics
+    show_all_hud_items
+}
+script coop_remote_intro_text {
+    coop_cam_freeze again
+    if ScreenElementExists id=intro_panel {
+        DestroyScreenElement id=intro_panel
+    }
+    if GotParam text {
+        create_panel_block {id=intro_panel
+            text=<text>
+            rgba=[128 128 128 128]
+            pos=(12.0, 395.0)
+            time=<time>
+            dims=(616.0, 0.0)
+            just=[left center]
+            internal_just=[center top]
+            parent=root_window
+        }
+    } else {
+        if GotParam goal {
+            GoalManager_GetGoalParams name=<goal>
+            FormatText TextName=goal_desc "\\c0%a - \\c5%b PTS." a=<view_goals_text> b=<reward_points>
+            create_intro_panel_block {id=intro_panel
+                text=<goal_desc>
+                rgba=[8 97 121 128]
+                pos=(12.0, 395.0)
+                time=1000000
+                dims=(616.0, 0.0)
+                just=[left center]
+                internal_just=[center top]
+                parent=root_window
+                create_bg
+            }
+        }
+    }
+    if GotParam cam_start_script {
+        <cam_start_script>
+    }
+}
+script coop_remote_cam_text {
+    coop_cam_freeze again
+    if ScreenElementExists id=goal_description_anchor {
+        return
+    }
+    if GoalManager_HasActiveGoals {
+        return
+    }
+    create_speech_box {
+        anchor_id=coop_cam_text_anchor
+        text=<text>
+        pos=<pos>
+        bg_x_scale=1.3
+        no_pad_choose
+        no_pad_start
+    }
+}
+script speech_box_style {
+    if CoopIsActive {
+        if (<anchor_id> = goal_description_anchor) {
+            if ScreenElementExists id=coop_cam_text_anchor {
+                DestroyScreenElement id=coop_cam_text_anchor
+            }
+            CoopSendSpawn call=coop_remote_cam_text params={text=<text> pos=<pos>}
+        }
+    }
+    coop_orig_speech_box_style <...>
+}
+script coop_orig_speech_box_style {
+    RunScriptOnScreenElement id=<speech_text> hide_speech_text params=<...>
+    DoMorph time=0 scale=(1.0, 1.0) alpha=1
+    wait 4 frame
+    DoMorph time=0.2 scale=(1.0, 1.0) alpha=1
+    RunScriptOnScreenElement id=<speech_text> speech_box_style_scale_text params=<...>
+}
+script IntroCameraDescription {
+    if CoopIsActive {
+        if CoopIsHost {
+            CoopSendSpawn call=coop_remote_intro_text params={<...>}
+        }
+    }
+    coop_orig_IntroCameraDescription <...>
+}
+script coop_orig_IntroCameraDescription {
+    if ! GotParam text {
+        if ! GotParam goal {
+            return
+        }
+    }
+    KillSpawnedScript name=TemporarilyDisableInput
+    SetButtonEventMappings block_menu_input
+    if (<cam_index> = 0) {
+        SpawnScript TemporarilyDisableInput params={time=1000}
+    } else {
+        SpawnScript TemporarilyDisableInput params={time=300}
+    }
+    if GotParam text {
+        create_panel_block {id=intro_panel
+            text=<text>
+            rgba=[128 128 128 128]
+            pos=(12.0, 395.0)
+            time=<time>
+            dims=(616.0, 0.0)
+            just=[left center]
+            internal_just=[center top]
+            parent=root_window
+        }
+    } else {
+        time2 = 1000000
+        GoalManager_GetGoalParams name=<goal>
+        FormatText TextName=goal_desc "\\c0%a - \\c5%b PTS." a=<view_goals_text> b=<reward_points>
+        create_intro_panel_block {id=intro_panel
+            text=<goal_desc>
+            rgba=[8 97 121 128]
+            pos=(12.0, 395.0)
+            time=<time2>
+            dims=(616.0, 0.0)
+            just=[left center]
+            internal_just=[center top]
+            parent=root_window
+            create_bg
+        }
+    }
+    if GotParam cam_start_script {
+        <cam_start_script>
+    }
+    while {
+        if SkaterCamAnimFinished name=<name> {
+            break
+        }
+        if intro_camera_event_handler:GetSingleTag pressed_x {
+            intro_camera_event_handler:RemoveTags Tags=[pressed_x]
+            KillSkaterCamAnim name=<name>
+            break
+        }
+        wait 1 gameframes
+    }
+    if GotParam cam_end_script {
+        <cam_end_script>
+    }
+    if ScreenElementExists id=intro_panel {
+        DestroyScreenElement id=intro_panel
+    }
+    DeBounce x time=0.3
+}
+coop_debug_names = [TRG_Ped_Hawk TRG_Ped_Segway TRG_Ped_Segway_Intro TRG_Ped_TeammatePro TRG_Ped_TeammateIntroPro TRG_Ped_BenWaiting TRG_Ped_Gurney09 TRG_Ped_Sick_Kid TRG_Race_Ped TRG_Ped_Bum01]
+script coop_debug_exists {
+    GetArraySize coop_debug_names
+    index = 0
+    while {
+        if ObjectExists id=(coop_debug_names [<index>]) {
+            FormatText TextName=msg "debug: name %i exists" i=<index>
+        } else {
+            FormatText TextName=msg "debug: name %i missing" i=<index>
+        }
+        CoopLog <msg>
+        index = (<index> + 1)
+    } <array_size>
+}
+script coop_debug_unpause {
+    CoopLog "debug: unpause all"
+    UnpauseObjects
+    UnpauseSkaters
+    UnpauseSpawnedScripts
+}
+script PlayIntroCameras {
+    if CoopIsActive {
+        if ! CoopIsHost {
+            if GotParam from_chapter_intro {
+                DoChapterIntroCamSetup
+                KillChapterMenu
+                DoChapterIntroCamCleanup
+                SafeCallback <...>
+                coop_intro_hold
+                return
+            }
+        }
+    }
+    coop_orig_PlayIntroCameras <...>
+}
+script coop_orig_PlayIntroCameras {
+    if ! GotParam goal_intro_cameras {
+        SafeCallback <...>
+        return
+    }
+    if GotParam from_chapter_intro {
+        DoChapterIntroCamSetup
+    }
+    GetArraySize <goal_intro_cameras>
+    if (<array_size> > 0) {
+        if GotParam from_cutscenes {
+            fadetoblack on time=0 alpha=1.0
+            wait 1 gameframes
+            fadetoblack off time=0
+        }
+        SetUpChapterMenu
+        if GotParam letterbox {
+            fake_letterboxing
+        }
+        if CoopIsActive {
+            if CoopIsHost {
+                if GotParam letterbox {
+                    CoopSendSpawn call=coop_remote_intro_begin params={letterbox}
+                } else {
+                    CoopSendSpawn call=coop_remote_intro_begin
+                }
+            }
+        }
+        if ! ScreenElementExists id=intro_camera_event_handler {
+            CreateScreenElement {
+                type=ContainerElement
+                parent=root_window
+                id=intro_camera_event_handler
+                event_handlers=[{pad_choose story_intro_advance_cam}]
+            }
+        }
+        FireEvent type=focus target=intro_camera_event_handler
+        <index> = 0
+        while {
+            play_me = 1
+            if StructureContains structure=(<goal_intro_cameras> [<index>]) goal {
+                if GoalManager_HasWonGoal name=((<goal_intro_cameras> [<index>]).goal) {
+                    play_me = 0
+                }
+            }
+            if (<play_me> = 1) {
+                PlayIntroSkaterCam index=<index> CAM=(<goal_intro_cameras> [<index>])
+            }
+            <index> = (<index> + 1)
+        } <array_size>
+        <index> = 0
+        while {
+            play_me = 1
+            if StructureContains structure=(<goal_intro_cameras> [<index>]) goal {
+                if GoalManager_HasWonGoal name=((<goal_intro_cameras> [<index>]).goal) {
+                    play_me = 0
+                }
+            }
+            if (<play_me> = 1) {
+                GetIntroSkaterCamName index=<index> CAM=(<goal_intro_cameras> [<index>])
+                IntroCameraDescription (<goal_intro_cameras> [<index>]) name=<name> cam_index=<index>
+            }
+            <index> = (<index> + 1)
+        } <array_size>
+        DestroyScreenElement id=intro_camera_event_handler
+        printf "done with all cameras"
+        fake_letterboxing remove
+        if CoopIsActive {
+            if CoopIsHost {
+                CoopSendSpawn call=coop_remote_intro_end
+            }
+        }
+        if ! GotParam from_chapter_intro {
+            DisplayLoadingScreen freeze
+            KillChapterMenu
+            PauseMusicAndStreams 1
+            wait 1 gameframes
+            HideLoadingScreen
+            pauseGame
+            hide_all_hud_items
+            DeBounce x time=0.3
+            ingame_confirm_save no_script=ingame_save_return_to_game
+            return
+        }
+        KillChapterMenu
+        if GotParam from_cutscenes {
+            fadetoblack on time=0 alpha=1
+            wait 1 gameframes
+            fadetoblack off time=0
+        }
+    }
+    removeparameter goal_intro_cameras
+    if GotParam from_chapter_intro {
+        DoChapterIntroCamCleanup
+    }
+    SafeCallback <...>
+}
+
+script coop_debug_killcams {
+    CoopLog "debug: kill all cams"
+    KillSkaterCamAnim all
+}
+script beat_first_stat_goal {
+    if CoopIsActive {
+        if (bump_stats = 0) {
+            return
+        }
+        create_panel_message id=coop_stat_msg text="Stat increased! Beating Stat Challenges raises your skills (pause > View Stats)." pos=(320.0, 120.0)
+        return
+    }
+    coop_orig_beat_first_stat_goal <...>
+}
+script coop_orig_beat_first_stat_goal {
+    printf "beat_first_stat_goal-----------------------------"
+    if (bump_stats = 0) {
+        return
+    }
+    pauseGame
+    wait 1 gameframe
+    PauseMusicAndStreams 1
+    pause_trick_text
+    pause_balance_meter
+    pause_run_timer
+    kill_blur
+    if ObjectExists id=speech_box_anchor {
+        RunScriptOnScreenElement id=speech_box_anchor hide_screen_element
+    }
+    if ScreenElementExists id=goal_start_dialog {
+        DestroyScreenElement id=goal_start_dialog
+    }
+    if ObjectExists id=ped_speech_dialog {
+        DestroyScreenElement id=ped_speech_dialog
+    }
+    if ObjectExists id=goal_retry_anchor {
+        DestroyScreenElement id=goal_retry_anchor
+    }
+    hide_goal_panel_messages
+    GoalManager_PauseAllGoals
+    create_dialog_box {
+        title="Stat Increased!"
+        text="Beating Stat Challenges will increase your skating abilities. Pause the game and go to the View Stats menu to see a list of challenges."
+        buttons=[{font=small text="Ok" pad_choose_script=kill_stat_goal_dialog}]
+    }
+    SpawnScript stats_message_kill_vibration
+}
+
+script coop_debug_swap_pro {
+    if CompositeObjectExists name=TRG_Ped_TeammatePro {
+        CoopLog "debug: swap with the teammate pro"
+        swap_skaters objId=TRG_Ped_TeammatePro profile_name=(skater_swapping_teammate_name)
+    } else {
+        CoopLog "debug: no teammate pro"
+    }
+}
+script coop_debug_win_bo {
+    CoopLog "debug: win BO_Goal_Gaps5"
+    GoalManager_WinGoal name=BO_Goal_Gaps5
+}
+script coop_debug_goto_ba {
+    CoopLog "debug: story to Barcelona"
+    SetChapterOnLevel level=load_ba
+    level_select_change_level level=load_ba dont_end_chapter
+}
+script ChapterAdvanceDialog {
+    if CoopIsActive {
+        if ! CoopIsHost {
+            if ScreenElementExists id=ped_speech_dialog {
+                DestroyScreenElement id=ped_speech_dialog
+            }
+            coop_message text="Co-op: the host decides when the story moves on"
+            if GotParam before_run {
+                KillChapterMenu <...>
+            }
+            return
+        }
+    }
+    coop_orig_ChapterAdvanceDialog <...>
+}
+script coop_orig_ChapterAdvanceDialog {
+    GetCurrentChapter
+    if ! StructureContains structure=(CHAPTER_INFO [<chapter>]) advance_ped_info {
+        script_assert "This chapter is missing advance_ped_info....can't find the dialog text"
+    }
+    ped_info = (CHAPTER_INFO [<chapter>].advance_ped_info)
+    if ScreenElementExists id=ped_speech_dialog {
+        DestroyScreenElement id=ped_speech_dialog
+    }
+    if ! GotParam before_run {
+        pauseGame
+        PauseStream 1
+        need_unpause_streams = need_unpause_streams
+        hide_all_hud_items
+        inside_run = inside_run
+    } else {
+        SetUpChapterMenu
+    }
+    CheckIfChapterIntrosViewed next
+    if (<viewed> = 1) {
+        buttons = [{font=small text=%"OK" pad_choose_script=KillChapterMenu
+                pad_choose_params={callback=<callback> <...>}
+            }
+        ]
+        title = (<ped_info>.name)
+        text = (<ped_info>.already_moved_on_message)
+    } else {
+        CheckIfChapterUnlocked next
+        if (<unlocked> = 0) {
+            buttons = [{font=small text=%"OK" pad_choose_script=KillChapterMenu
+                    pad_choose_params={callback=<callback> <...>}
+                }
+            ]
+            title = (<ped_info>.name)
+            text = (<ped_info>.need_more_points_message)
+        } else {
+            buttons = [{font=small text=%"No" pad_choose_script=KillChapterMenu
+                    pad_choose_params={callback=<callback> <...>}
+                }
+                {font=small text=%"Yes" pad_choose_script=KillChapterMenu
+                    pad_choose_params={callback=GotoNextChapterAccept}
+                }
+            ]
+            title = (<ped_info>.name)
+            text = (<ped_info>.move_on_now_message)
+        }
+    }
+    create_snazzy_dialog_box {
+        title=<title>
+        text=<text>
+        text_dims=(400.0, 0.0)
+        no_bg
+        buttons=<buttons>
+    }
+}
+
+script level_select_change_level {
+    if CoopIsActive {
+        if ! CoopIsHost {
+            if ! CoopIsRemote {
+                if (<level> = Load_MainMenu) {
+                    coop_orig_level_select_change_level <...>
+                    return
+                }
+                coop_message text="Co-op: only the host changes the level"
+                if ScreenElementExists id=level_select_anchor {
+                    DestroyScreenElement id=level_select_anchor
+                }
+                exit_pause_menu
+                return
+            }
+        }
+    }
+    coop_orig_level_select_change_level <...>
+}
+script coop_orig_level_select_change_level {
+    GoalManager_ShowPoints
+    if ! GoalManager_HasActiveGoals {
+        GoalManager_ShowGoalPoints
+    }
+    if ScreenElementExists id=level_select_anchor {
+        DestroyScreenElement id=level_select_anchor
+        load_level_select_textures_to_main_memory unload
+    }
+    if ScreenElementExists id=current_menu_anchor {
+        DestroyScreenElement id=current_menu_anchor
+    }
+    if LevelIs Load_sk5ed {
+        load_parked_textures_to_main_memory unload
+    }
+    if LevelIs Load_MainMenu {
+        SetColorBufferClear clear=0
+    }
+    if LevelIs load_sk5ed_gameplay {
+        RailEditor:DestroyEditedRailSectors DoNotUpdateSuperSectors
+    }
+    kill_level_select_cams
+    if GameModeEquals is_career {
+        if ! GotParam dont_end_chapter {
+            SetHighestChapterWithLevel level=<level>
+        }
+        if ! LevelIs Load_MainMenu {
+            if ((<level> = load_boardshop) or (<level> = load_cas)) {
+                temp = <level>
+                GetCurrentLevel
+                array = return_to_level
+                SetArrayElement ArrayName=array index=0 newvalue=<level>
+                level = <temp>
+            }
+        }
+    }
+    if InNetGame {
+        show_warning = 1
+    }
+    if CD {
+        if IsCustomPark {
+            if isNGC {
+                DisplayLoadingScreen blank
+            }
+            really_change_level <...>
+        } else {
+            if ! LevelIs <level> {
+                if isNGC {
+                    DisplayLoadingScreen blank
+                }
+                really_change_level <...>
+            } else {
+                if GotParam chose_same_level_script {
+                    <chose_same_level_script>
+                } else {
+                    if root_window:GetSingleTag no_exit_pause_menu {
+                        level_select_menu_exit
+                        return
+                    }
+                    if GotParam end_run {
+                        level_select_menu_exit end_run
+                        return
+                    }
+                    if InSplitScreenGame {
+                        level_select_menu_exit end_run
+                        return
+                    }
+                }
+            }
+        }
+    } else {
+        really_change_level <...>
+    }
+    level_select_menu_exit no_new_menu
+    exit_pause_menu
+}
+
+script coop_debug_start_goal {
+    CoopLog "debug: take BO_Goal_TrickBeat (as from its NPC)"
+    goal_accept_trigger goal_id=BO_Goal_TrickBeat force_start
+}
+script coop_debug_win_trickbeat {
+    if GoalManager_GoalIsActive name=BO_Goal_TrickBeat {
+        CoopLog "debug: win BO_Goal_TrickBeat"
+        GoalManager_WinGoal name=BO_Goal_TrickBeat
+    } else {
+        CoopLog "debug: BO_Goal_TrickBeat not active"
+    }
+}
+script coop_debug_take_ollie {
+    CoopLog "debug: take tr_goal_counter (as from its NPC)"
+    goal_accept_trigger goal_id=tr_goal_counter force_start
+}
+script coop_debug_win_ollie {
+    if GoalManager_GoalIsActive name=tr_goal_counter {
+        CoopLog "debug: win tr_goal_counter"
+        GoalManager_WinGoal name=tr_goal_counter
+    } else {
+        CoopLog "debug: tr_goal_counter not active"
+    }
+}
+script coop_debug_win_gaps7 {
+    if GoalManager_GoalIsActive name=tr_goal_gaps7 {
+        CoopLog "debug: win tr_goal_gaps7"
+        GoalManager_WinGoal name=tr_goal_gaps7
+    } else {
+        CoopLog "debug: tr_goal_gaps7 not active"
+    }
+}
+script coop_debug_chain_state {
+    if GoalManager_GoalIsActive name=tr_goal_gaps7 {
+        CoopLog "debug: gaps7 active"
+    } else {
+        CoopLog "debug: gaps7 not active"
+    }
+    if GoalManager_HasWonGoal name=tr_goal_gaps7 {
+        CoopLog "debug: gaps7 won"
+    } else {
+        CoopLog "debug: gaps7 not won"
+    }
+    if GoalManager_GoalIsActive name=tr_goal_gaps3 {
+        CoopLog "debug: gaps3 active"
+    } else {
+        CoopLog "debug: gaps3 not active"
+    }
+}
+script coop_debug_save_menu {
+    CoopLog "debug: save menu"
+    launch_ingame_menu_save_game_sequence
+}
+script coop_debug_goal_state {
+    if GoalManager_GoalIsActive name=BO_Goal_TrickBeat {
+        CoopLog "debug: trickbeat active"
+    } else {
+        CoopLog "debug: trickbeat not active"
+    }
+    if GoalManager_HasWonGoal name=BO_Goal_TrickBeat {
+        CoopLog "debug: trickbeat won"
+    } else {
+        CoopLog "debug: trickbeat not won"
+    }
+}
+script coop_debug_teammate {
+    FormatText ChecksumName=n "%s" s=skater_swapping_teammate_name
+    if ChecksumEquals a=(skater_swapping_teammate_name) b=None {
+        CoopLog "debug: teammate None"
+    } else {
+        CoopLog "debug: teammate set"
+    }
+    Get_Current_Skater_name
+    if ChecksumEquals a=<name> b=custom {
+        CoopLog "debug: current skater custom"
+    } else {
+        CoopLog "debug: current skater not custom"
+    }
+}
+script swap_skaters {obj_1 = skater
+    if CoopIsActive {
+        if GotParam profile_name {
+            if ChecksumEquals a=<profile_name> b=None {
+                coop_message text="Co-op: the host hasn't picked the pro teammate yet"
+                return
+            }
+        }
+    }
+    coop_orig_swap_skaters <...>
+}
+script coop_orig_swap_skaters {obj_1 = skater
+    GoalManager_ClearLastGoal
+    TerminateObjectsScripts id=<objId> script_name=setup_ped_speech
+    TerminateObjectsScripts id=<objId> script_name=ped_speech_got_trigger
+    TerminateObjectsScripts id=<objId> script_name=swap_skaters_set_avoid_exception
+    <objId>:Obj_ClearException ObjectOutofRadius
+    <objId>:Obj_ClearException ObjectInRadius
+    if ScreenElementExists id=ped_speech_dialog {
+        DestroyScreenElement id=ped_speech_dialog
+    }
+    if IsSkaterOnVehicle {
+        GetTags
+        if (<racemode> = gurney) {
+            reset_gurney no_ai show_gurney
+        } else {
+            was_on_vehicle = 1
+        }
+        segway_reenable_gurney
+        SkaterVehicleOff
+        SkaterLoopingSound_TurnOn
+    }
+    remove_all_anim_subsets
+    TurnOffLevelParticles
+    SwapObjectModels obj_1=<obj_1> obj_2=<objId>
+    if (<profile_name> = custom) {
+        <objId>:ped_disable_bones
+    } else {
+        <objId>:ped_enable_bones
+    }
+    SetSwappedSkaterName profile_name=<profile_name> return_params
+    RefreshSwappedSkaterData return_params
+    if GotParam restart_node {
+        ResetSkaters node_name=<restart_node>
+        skater:RemoveSkaterFromWorld
+        wait 1 frame
+        skater:AddSkaterToWorld
+    }
+    if GotParam motoskateboard {
+        MotoSkateboardOn
+        if Walking {
+            CleanUp_WalkingtoSkating
+            SwitchToSkatingPhysics
+            makeskatergoto ongroundai
+        }
+    } else {
+        MotoSkateboardOff
+    }
+    if GotParam vehicle_params {
+        Vehicle_Start params=<vehicle_params>
+    } else {
+        if GotParam was_on_vehicle {
+            KillObjectAnim current
+            makeskatergoto ongroundai
+        }
+    }
+    if ! GotParam no_ped_setup {
+        if GotParam was_on_vehicle {
+            TerminateObjectsScripts id=<objId>
+            get_skater_index_from_name name=<old_profile_name>
+            if StructureContains vehicle_params structure=(master_skater_list [<skater_index>]) {
+                old_vehicle_params = (master_skater_list [<skater_index>].vehicle_params)
+                <objId>:Obj_PlayAnim Anim=(<old_vehicle_params>.idle_anim) Cycle
+            }
+        } else {
+            if <objId>:Obj_HasComponent PedLogic {
+                RunScriptOnObject {
+                    id=<objId>
+                    Ped_InitAI
+                    params={
+                        stand
+                        GetAttention
+                        should_look_at_skater=0
+                    }
+                }
+                <objId>:Ped_SetLogicState STATE_standing
+            } else {
+                <objId>:Obj_PlayAnim Anim=Ped_M_SkateIdle1 Cycle
+            }
+        }
+        RunScriptOnObject {
+            id=<objId>
+            setup_ped_speech
+            params={
+                ped_id=<objId>
+                accept_text="Press \\m5 to switch."
+                swap_skaters
+                swap_skaters_params={
+                    objId=<objId>
+                    profile_name=<old_profile_name>
+                    restart_node=<restart_node>
+                    activation_script=<activation_script>
+                    activation_script_params=<activation_script_params>
+                }
+                activation_script=<activation_script>
+                activation_script_params=<activation_script_params>
+            }
+        }
+        <objId>:Obj_SpawnScript swap_skaters_set_avoid_exception
+    }
+    <objId>:SetTags profile_name=<old_profile_name>
+    UnpauseSkaters
+    restore_start_key_binding
+}
+
+script coop_host_reload {
+    coop_message text="Co-op: your friend is back - reloading the level"
+    wait 30 gameframes
+    GetCurrentLevel
+    change_level level=<level>
+}
+script coop_apply_name {
+    if CoopGetName {
+        SetPreferencesFromUI prefs=network field="network_id" string=<coop_name>
+    }
+}
+script coop_debug_win_ba {
+    CoopLog "debug: win BA_Goal_Gaps13"
+    GoalManager_WinGoal name=BA_Goal_Gaps13
+}
+script coop_debug_reload {
+    CoopLog "debug: reload level"
+    GetCurrentLevel
+    change_level level=<level>
+}
+script change_level {
+    CoopBeforeLevelChange
+    coop_orig_change_level <...>
+}
+script coop_orig_change_level {
+    parked_loading_screen_show level=<level>
+    skater:Vibrate off
+    if InSplitScreenGame {
+        if ObjectExists id=skater2 {
+            skater2:Vibrate off
+        }
+    }
+    GetArraySize scripts_to_kill_when_changing_levels
+    <index> = 0
+    while {
+        KillSpawnedScript name=(scripts_to_kill_when_changing_levels [<index>])
+        <index> = (<index> + 1)
+    } <array_size>
+    change is_changing_levels=1
+    change tod_manager_inactive=0
+    CheckForInvalidLevels level=<level>
+    if LevelIs Load_MainMenu {
+        load_cas_textures_to_main_memory unload dont_assert
+        load_mainmenu_textures_to_main_memory unload dont_assert
+    }
+    if LevelIs Load_sk5ed {
+        SwitchOffRailEditor
+    }
+    ResetScore
+    SetMusicLooping 0
+    SFX_Music_Volume_Box_Kill_State
+    if ! isObserving {
+        skater:reset_model_lights
+    }
+    if ObjectExists id=skater2 {
+        skater2:reset_model_lights
+    }
+    change check_for_unplugged_controllers=0
+    if GotParam next_level_script {
+        change next_level_script=<next_level_script>
+    }
+    if ! isObserving {
+        skater:ClearPanel_Landed
+    }
+    if ! GotParam no_levelUnload {
+        printf "performing LevelUnload"
+        goalmanager_levelunload
+    }
+    ResetScore
+    ResetScorePot
+    hide_console_window
+    goalmanager_levelunload
+    GoalManager_DeactivateAllGoals
+    if ! isObserving {
+        skater:StatsManager_DeactivateGoals
+    }
+    ScreenElementSystemCleanup
+    if ! InNetGame {
+        hide_everything
+    }
+    kill_blur
+    if InSplitScreenGame {
+        launch_two_player
+    }
+    if isXbox {
+        DisplayLoadingScreen freeze
+    }
+    changelevel <...>
+}
+
+script CreateLostConnectionDialog {
+    if ! CoopWasActive {
+        coop_orig_CreateLostConnectionDialog <...>
+        return
+    }
+    HideLoadingScreen
+    exit_pause_menu
+    destroy_onscreen_keyboard
+    dialog_box_exit
+    dialog_box_exit anchor_id=link_lost_dialog_anchor
+    dialog_box_exit anchor_id=quit_dialog_anchor
+    change check_for_unplugged_controllers=0
+    create_error_box {title="Co-op"
+        text="The host has left the game. Select OK to go back to the main menu."
+        buttons=[{text="ok" pad_choose_script=coop_lost_host_ok}
+        ]
+        delay_input
+    }
+}
+script coop_lost_host_ok {
+    dialog_box_exit
+}
+script coop_client_host_gone {
+    exit_pause_menu
+    dialog_box_exit
+    PauseObjects
+    quit_network_game
+    UnpauseObjects
+    wait 60 gameframes
+    create_error_box {title="Co-op"
+        text="The host has left the game."
+        buttons=[{text="ok" pad_choose_script=coop_lost_host_ok}
+        ]
+    }
+}
+script coop_orig_CreateLostConnectionDialog {
+    HideLoadingScreen
+    GoalManager_DeactivateAllGoals force_all
+    GoalManager_UninitializeAllGoals
+    GoalManager_SetCanStartGoal 0
+    exit_pause_menu
+    destroy_onscreen_keyboard
+    force_close_rankings dont_retry
+    if InNetGame {
+        if LocalSkaterExists {
+            skater:Vibrate off
+        }
+    }
+    if ! isObserving {
+        ExitSurveyorMode
+    }
+    dialog_box_exit
+    dialog_box_exit anchor_id=link_lost_dialog_anchor
+    dialog_box_exit anchor_id=quit_dialog_anchor
+    change check_for_unplugged_controllers=0
+    create_error_box {title="Notice"
+        text="You have lost connection to the host. Select OK to leave this game."
+        buttons=[{text="ok" pad_choose_script=accept_lost_connection}
+        ]
+        delay_input
+    }
+}
+
+script coop_debug_tr {
+    if GoalManager_HasWonGoal name=tr_goal_gaps12 {
+        CoopLog "debug: tr_goal_gaps12 won (wall broken by the story)"
+    } else {
+        CoopLog "debug: tr_goal_gaps12 not won"
+    }
+    if GoalManager_HasWonGoal name=tr_goal_gaps27 {
+        CoopLog "debug: tr_goal_gaps27 won"
+    }
+    if GameModeEquals is_career {
+        CoopLog "debug: is_career"
+    } else {
+        CoopLog "debug: NOT is_career"
+    }
+    if InNetGame {
+        CoopLog "debug: InNetGame yes"
+    }
+    if InMultiplayerGame {
+        CoopLog "debug: InMultiplayerGame yes"
+    }
+    if IsAlive name=TRG_G_Gap27_Pro {
+        CoopLog "debug: Tony (TRG_G_Gap27_Pro) alive"
+    } else {
+        CoopLog "debug: Tony (TRG_G_Gap27_Pro) missing"
+    }
+    if GoalManager_GoalExists name=TR_Goal_Gaps27 {
+        CoopLog "debug: goal TR_Goal_Gaps27 exists"
+    }
+    if IsAlive name=g_wall_break_pre {
+        CoopLog "debug: wall intact"
+    } else {
+        CoopLog "debug: wall broken"
+    }
+    coop_debug_pos
+}
+script coop_debug_music {
+    GetValueFromVolume cdvol
+    FormatText TextName=t "debug: music cdvol=%v outside=%o force_ambient=%f" v=<value> o=MusicVolOutsideBox f=ForceAmbientSFXToMusicVolume
+    CoopLog <t>
+    GetValueFromVolume sfxvol
+    FormatText TextName=t "debug: sfxvol=%v" v=<value>
+    CoopLog <t>
+}
+
+script goal_accept_trigger {
+    coop_orig_goal_accept_trigger <...>
+    if CoopIsActive {
+        if ! CoopIsRemote {
+            if GoalManager_GoalIsActive name=<goal_id> {
+                CoopSharedGoal goal_id=<goal_id> mode=start
+            }
+        }
+    }
+}
+script coop_orig_goal_accept_trigger {
+    DeBounce x time=0.5
+    speech_box_exit anchor_id=goal_start_dialog
+    goal_check_for_required_tricks goal_id=<goal_id>
+    <trigger_exists> = 0
+    if GotParam trigger_obj_id {
+        if NodeExists <trigger_obj_id> {
+            <trigger_exists> = 1
+        }
+    }
+    if GotParam force_start {
+        if ! GoalManager_GoalInitialized name=<goal_id> {
+            GoalManager_InitializeGoal name=<goal_id>
+        }
+        if (<trigger_exists> = 1) {
+            GoalManager_ResetGoalTrigger name=<goal_id> no_new_exceptions
+            if IsAlive name=<trigger_obj_id> {
+                <trigger_obj_id>:Obj_ClearException ObjectInRadius
+            }
+        }
+        GoalManager_DeactivateAllGoals
+        GoalManager_ActivateGoal name=<goal_id> <...>
+        return
+    }
+    if ! SkaterCurrentScorePotGreaterThan 0 {
+        if GoalManager_CanStartGoal name=<goal_id> {
+            GetSkaterId
+            if <objId>:OnGround {
+                if SkaterCurrentScorePotLessThan 1 {
+                    if <objId>:OnGround {
+                        GoalManager_GetGoalParams name=<goal_id>
+                        if (<trigger_exists> = 1) {
+                            GoalManager_ResetGoalTrigger name=<goal_id> no_new_exceptions
+                            if IsAlive name=<trigger_obj_id> {
+                                <trigger_obj_id>:Obj_ClearException ObjectInRadius
+                            }
+                        }
+                        GoalManager_DeactivateAllGoals
+                        if GotParam quick_start {
+                            GoalManager_QuickStartGoal name=<goal_id>
+                        } else {
+                            GoalManager_ActivateGoal name=<goal_id> <...>
+                        }
+                    } else {
+                        if ! <objId>:RightPressed {
+                            if ! <objId>:LeftPressed {
+                                if ! <objId>:UpPressed {
+                                    if ! <objId>:DownPressed {
+                                        GoalManager_GetGoalParams name=<goal_id>
+                                        if (<trigger_exists> = 1) {
+                                            GoalManager_ResetGoalTrigger name=<goal_id> no_new_exceptions
+                                            if IsAlive name=<trigger_obj_id> {
+                                                <trigger_obj_id>:Obj_ClearException ObjectInRadius
+                                            }
+                                        }
+                                        GoalManager_DeactivateAllGoals
+                                        if GotParam quick_start {
+                                            GoalManager_QuickStartGoal name=<goal_id>
+                                        } else {
+                                            GoalManager_ActivateGoal name=<goal_id> <...>
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                if ! <objId>:RightPressed {
+                    if ! <objId>:LeftPressed {
+                        if ! <objId>:UpPressed {
+                            if ! <objId>:DownPressed {
+                                GoalManager_GetGoalParams name=<goal_id>
+                                if (<trigger_exists> = 1) {
+                                    GoalManager_ResetGoalTrigger name=<goal_id> no_new_exceptions
+                                    if IsAlive name=<trigger_obj_id> {
+                                        <trigger_obj_id>:Obj_ClearException ObjectInRadius
+                                    }
+                                }
+                                GoalManager_DeactivateAllGoals
+                                if GotParam quick_start {
+                                    GoalManager_QuickStartGoal name=<goal_id>
+                                } else {
+                                    GoalManager_ActivateGoal name=<goal_id> <...>
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+script coop_remote_start_goal {
+    if GoalManager_HasActiveGoals {
+        create_panel_message id=coop_goal_msg text="Your friend took a goal - finish yours to join in" pos=(320.0, 120.0) time=6000
+        return
+    }
+    if ! GoalManager_GoalInitialized name=<goal_id> {
+        GoalManager_InitializeGoal name=<goal_id>
+    }
+    GoalManager_DeactivateAllGoals
+    GoalManager_ActivateGoal name=<goal_id>
+    if GoalManager_GoalIsActive name=<goal_id> {
+        CoopSharedGoal goal_id=<goal_id> mode=joined
+        CoopSendSpawn call=coop_remote_goal_joined params={goal_id=<goal_id>}
+    }
+}
+script coop_remote_goal_joined {
+    CoopSharedGoal goal_id=<goal_id> mode=joined
+}
+script coop_goal_done_wait {
+    if GoalManager_GoalIsActive name=<goal_id> {
+        GoalManager_DeactivateGoal name=<goal_id>
+    }
+    create_panel_message id=coop_goal_msg text="Goal done! Waiting for your friend to finish it too." pos=(320.0, 120.0) time=6000
+}
+script coop_peer_goal_done {
+    if GoalManager_GoalIsActive name=<goal_id> {
+        create_panel_message id=coop_goal_msg text="Your friend finished this goal - finish it too!" pos=(320.0, 120.0) time=6000
+    } else {
+        create_panel_message id=coop_goal_msg text="Your friend finished a shared goal - take it again to finish it too" pos=(320.0, 120.0) time=6000
+    }
+}
+
+script UnloadAnimsAndCreateMemCardPools {
+    if ! LevelIs Load_MainMenu {
+        if ! LevelIs Load_sk5ed {
+            change DebugPausedObjects=1
+            if CoopIsActive {
+                CoopLog "save menu: animations kept loaded (co-op)"
+            } else {
+                do_unload_unloadable
+            }
+            if ! isNGC {
+                CreateTemporaryMemCardPools
+            }
+        }
+    }
+}
+
+script coop_goal_won_chain {
+    GoalManager_GetGoalParams name=<goal_id>
+    if GotParam child {
+        <frames> = 0
+        while {
+            if GoalManager_GoalIsActive name=<child> {
+                CoopSharedGoal goal_id=<child> mode=joined
+                break
+            }
+            if (<frames> > 120) {
+                CoopLog "shared goals: the next stage didn't start"
+                break
+            }
+            <frames> = (<frames> + 1)
+            wait 1 gameframe
+        }
+    }
+}
+
+script maybe_auto_load_from_memory_card {
+    FormatText TextName=t "autoload: DoAutoload=%d" d=DoAutoload
+    CoopLog <t>
+    coop_orig_maybe_auto_load_from_memory_card <...> force_autoload
+}
+script coop_orig_maybe_auto_load_from_memory_card {
+    if (DoAutoload = 0) {
+        SpawnScript wait_and_pause_skater params={time=1 dont_pause_music=1}
+        if ConnectedToPeer {
+            SetNetworkMode INTERNET_MODE
+            change_gamemode_net
+            SetQuietMode off
+            rejoin_lobby
+            kill_start_key_binding
+        } else {
+            launch_main_menu
+        }
+    } else {
+        change DoAutoload=0
+        if IsInternetGameHost {
+            CheckForCardOnBootup
+        } else {
+            if IsJoiningInternetGame {
+                CheckForCardOnBootup
+            } else {
+                if ! isXbox {
+                    if ! GotParam force_autoload {
+                        wait 3 gameframes
+                        if ! PadsPluggedIn {
+                            goto back_to_main_menu2
+                        }
+                        SpawnScript wait_and_pause_skater
+                        goto back_to_main_menu2
+                    } else {
+                        SpawnScript wait_and_pause_skater params={time=1}
+                        CheckForCardOnBootup
+                    }
+                } else {
+                    SpawnScript wait_and_pause_skater
+                    CheckForCardOnBootup
+                }
+            }
+        }
+    }
+}
+
+script coop_debug_stop_goals {
+    GoalManager_DeactivateAllGoals
+    CoopLog "debug: goals stopped"
+}
+script coop_debug_goto_mullen {
+    ResetSkaters node_name=TRG_G_Counter_RESTARTNODE
+    CoopLog "debug: at Mullen's goal start"
+}
+script coop_debug_load_save {
+    SetSectionsToApplyWhenLoading All
+    if LoadFromMemoryCard name=<name> type=OptionsAndPros {
+        CoopLog "debug: save loaded"
+    } else {
+        CoopLog "debug: save load failed"
+    }
+}
