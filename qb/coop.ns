@@ -165,7 +165,17 @@ script coop_debug_f8 {
 script coop_client_save_refused {
     coop_message text="Co-op: story progress is saved by the host"
 }
+script coop_client_saved_own {
+    create_panel_message id=coop_status_msg text="Co-op: saved your own story (the co-op story is the host's)" pos=(320.0, 80.0) time=5000
+}
 script coop_teleport_request {
+    if (coop_cam_frozen = 1) {
+        CoopLog "teleport key: unfreezing the camera hold"
+        change coop_intro_held = 0
+        coop_cam_unfreeze
+        coop_message text="Co-op: unstuck"
+        return
+    }
     if GoalManager_HasActiveGoals {
         coop_message text="Co-op: no teleport during a goal"
         return
@@ -381,8 +391,15 @@ script coop_cam_freeze {
 }
 script coop_cam_freeze_watch {
     idle = 0
+    total = 0
     while {
         wait 1 gameframe
+        total = (<total> + 1)
+        if (<total> > 3600) {
+            CoopLog "camera hold: over a minute, let go"
+            change coop_intro_held = 0
+            break
+        }
         if SkaterCamAnimFinished {
             idle = (<idle> + 1)
         } else {
@@ -1328,6 +1345,15 @@ script coop_debug_music {
 }
 
 script goal_accept_trigger {
+    if CoopIsActive {
+        if ! CoopIsRemote {
+            if CoopSharedGoal goal_id=<goal_id> mode=waiting {
+                speech_box_exit anchor_id=goal_start_dialog
+                create_panel_message id=coop_goal_msg text="You've done this goal - waiting for your friend to finish it" pos=(320.0, 120.0) time=5000
+                return
+            }
+        }
+    }
     coop_orig_goal_accept_trigger <...>
     if CoopIsActive {
         if ! CoopIsRemote {
@@ -1558,4 +1584,122 @@ script coop_debug_load_save {
     } else {
         CoopLog "debug: save load failed"
     }
+}
+
+script enter_kb_chat {
+    create_onscreen_keyboard allow_cancel no_buttons pos=(320.0, 260.0) keyboard_done_script=coop_chat_done keyboard_cancel_script=coop_chat_cancel display_text="ENTER MESSAGE: " keyboard_title="ENTER MESSAGE" min_length=0 max_length=127 display_text_scale=0.5
+    if ScreenElementExists id=keyboard_anchor {
+        keyboard_anchor:SetTags coop_chat
+    }
+}
+script coop_chat_done {
+    GetTextElementLength id=keyboard_current_string
+    if (<length> = 0) {
+        destroy_onscreen_keyboard
+    } else {
+        entered_chat_message
+    }
+}
+script coop_chat_cancel {
+    destroy_onscreen_keyboard
+}
+script coop_chat_escape {
+    if ScreenElementExists id=keyboard_anchor {
+        if keyboard_anchor:GetSingleTag coop_chat {
+            CoopLog "chat: closed with Esc"
+            destroy_onscreen_keyboard
+        }
+    }
+}
+script coop_leave_confirm {
+    create_panel_message id=coop_status_msg text=<text> pos=(320.0, 80.0) time=4000
+}
+script coop_host_leave {
+    CoopLog "host: leaving co-op"
+    exit_pause_menu
+    if LevelIs Load_MainMenu {
+        chosen_leave_server
+        CoopSetRole 0
+        coop_message text="Co-op: closed"
+        return
+    }
+    coop_message text="Co-op: closed - reloading the level for single player"
+    <frames> = 0
+    while {
+        if ! CoopLinkUp {
+            break
+        }
+        <frames> = (<frames> + 1)
+        if (<frames> > 600) {
+            CoopLog "host: the friend didn't leave in 10 s"
+            break
+        }
+        wait 1 gameframe
+    }
+    wait 60 gameframes
+    GetCurrentLevel
+    coop_level = <level>
+    GoalManager_DeactivateAllGoals
+    goalmanager_levelunload
+    cleanup preserve_skaters
+    chosen_leave_server
+    CoopSetRole 0
+    FlushDeadObjects
+    SetGameType career
+    SetCurrentGameType
+    setservermode on
+    StartServer
+    SetJoinMode JOIN_MODE_PLAY
+    JoinServer
+    while {
+        if JoinServerComplete {
+            break
+        } else {
+            wait 1
+        }
+    }
+    change_level level=<coop_level>
+}
+script coop_client_leave {
+    CoopLog "client: leaving co-op"
+    exit_pause_menu
+    dialog_box_exit
+    PauseObjects
+    quit_network_game
+    UnpauseObjects
+    wait 60 gameframes
+    coop_message text="Co-op: you left the host's game"
+}
+script coop_after_goal_won {
+    wait 60 gameframes
+    <frames> = 0
+    while {
+        if SkaterCamAnimFinished {
+            break
+        }
+        <frames> = (<frames> + 1)
+        if (<frames> > 1800) {
+            break
+        }
+        wait 1 gameframe
+    }
+    wait 90 gameframes
+    if GoalManager_HasActiveGoals {
+        return
+    }
+    if (coop_cam_frozen = 1) {
+        return
+    }
+    skater:EnablePlayerInput
+    CoopLog "after a goal: the player's input is on"
+}
+script coop_debug_save_test {
+    CoopLog "debug: save test"
+    UnloadAnimsAndCreateMemCardPools
+    if SaveToMemoryCard name="coop night test" type=OptionsAndPros {
+        CoopLog "debug: save test ok"
+    } else {
+        CoopLog "debug: save test failed"
+    }
+    DestroyTemporaryMemCardPools
 }

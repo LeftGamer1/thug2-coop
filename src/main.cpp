@@ -15,6 +15,7 @@
 
 #include "automation.h"
 #include "game.h"
+#include "gamepad.h"
 #include "link.h"
 #include "patch.h"
 
@@ -58,9 +59,12 @@ struct Settings {
     int hostKey = VK_F10;     // [keys] host, join, teleport: virtual key codes, optionally with modifier bits
     int joinKey = VK_F11;
     int teleportKey = VK_F12;
+    int leaveKey = VK_F9;
     int playerCollision = -1; // skaters knock each other down: 1 on, 0 off, -1 the game's network option
-    int screenWidth = 1920;   // [display] resolution; 0: Launcher.exe's choice
-    int screenHeight = 1080;
+    int screenWidth = 0;      // [display] resolution (desktop: the monitor's); 0: Launcher.exe's choice
+    int screenHeight = 0;
+    bool gamepad = true;      // [gamepad] enabled: XInput pads (gamepad.cpp)
+    int displayMode = 1;      // [display] mode: 0 fullscreen, 1 borderless (a window over the whole screen), 2 windowed
 } g_settings;
 
 // The modifier bits of a key setting (above the virtual key code).
@@ -147,19 +151,29 @@ void LoadSettings()
     g_settings.sharedGoals = GetPrivateProfileIntA("coop", "shared_goals", 1, path) != 0;
     g_settings.automation = GetPrivateProfileIntA("debug", "automation", 0, path) != 0;
     g_settings.playerCollision = GetPrivateProfileIntA("coop", "player_collision", -1, path);
+    g_settings.gamepad = GetPrivateProfileIntA("gamepad", "enabled", 1, path) != 0;
     g_settings.hostKey = KeySetting("host", VK_F10, path);
     g_settings.joinKey = KeySetting("join", VK_F11, path);
     g_settings.teleportKey = KeySetting("teleport", VK_F12, path);
-    char resolution[32];
-    GetPrivateProfileStringA("display", "resolution", "1920x1080", resolution, sizeof(resolution), path);
+    g_settings.leaveKey = KeySetting("leave", VK_F9, path);
+    char text[32];
+    GetPrivateProfileStringA("display", "mode", g_settings.windowed ? "windowed" : "borderless", text, sizeof(text), path);
+    g_settings.displayMode = _stricmp(text, "fullscreen") == 0 ? 0 : _stricmp(text, "windowed") == 0 ? 2 : 1;
+    g_settings.windowed = g_settings.displayMode == 2; // ([debug] windowed=1 is the old name of mode=windowed)
+    GetPrivateProfileStringA("display", "resolution", "desktop", text, sizeof(text), path);
     int width = 0, height = 0;
     char x = 0;
-    if (std::sscanf(resolution, " %d %c %d", &width, &x, &height) == 3 && (x == 'x' || x == 'X' || x == '*') &&
-        width >= 320 && width <= 7680 && height >= 240 && height <= 4320) {
+    if (_stricmp(text, "desktop") == 0) {
+        width = GetSystemMetrics(SM_CXSCREEN); // (real pixels: the process is DPI aware, DllMain)
+        height = GetSystemMetrics(SM_CYSCREEN);
+    } else if (std::sscanf(text, " %d %c %d", &width, &x, &height) != 3 || (x != 'x' && x != 'X' && x != '*')) {
+        width = height = 0; // "launcher", empty or not understood
+    }
+    if (width >= 320 && width <= 7680 && height >= 240 && height <= 4320) {
         g_settings.screenWidth = width;
         g_settings.screenHeight = height;
     } else {
-        g_settings.screenWidth = g_settings.screenHeight = 0; // "launcher", empty or not understood
+        g_settings.screenWidth = g_settings.screenHeight = 0;
     }
 }
 
@@ -178,6 +192,7 @@ bool g_joinNow = false;    // client: the host said its game is up
 bool g_clientJoined = false; // host: the client has joined the game
 bool g_selfJoined = false;   // client: JoinServer sent (story events apply from then on)
 bool g_hostInLevel = false;  // host: its last LaunchLevel was a level, not the main menu
+bool g_inMainMenu = true;    // the last LaunchLevel was Load_MainMenu (the widescreen code draws it 4:3)
 bool g_hadFriendInLevel = false; // host: a friend's skater was in this level already (a rejoin reloads it)
 
 // --- script functions -------------------------------------------------------------------------------------------
@@ -493,6 +508,8 @@ bool __fastcall WinGoalHook(void* manager, void*, uint32_t name)
         link::Send(link::kGoalWon, &name, sizeof(name));
         ShareNextStage(name);
     }
+    if (InCoopSession())
+        game::SpawnScript("coop_after_goal_won");
     return won;
 }
 
@@ -626,6 +643,7 @@ bool __cdecl LaunchLevelHook(game::CStruct* params, game::CScript* script)
     if (params)
         game::GetChecksumNamed(params, 0x651533EC, &level); // level=<load script>
     g_hostInLevel = level != 0 && level != 0xE92ECAFE;     // Load_MainMenu
+    g_inMainMenu = !g_hostInLevel;
     if (g_role == Role::Client && g_selfJoined && !g_hostInLevel) {
         // the friend went back to the main menu (quit, or the host is gone): co-op over for them (F11 joins again)
         Log("client: back to the main menu, co-op ended");
@@ -798,6 +816,8 @@ void OnLinkMessage(uint32_t type, const uint8_t* data, uint32_t size)
         if (g_role == Role::Client && g_selfJoined) {
             Log("client: the host left the story, co-op ended");
             g_role = Role::None;
+            g_selfJoined = false;
+            link::Close(); // (the host waits for this before it cleans its level up)
             game::SpawnScript("coop_client_host_gone");
         }
         break;
@@ -820,6 +840,7 @@ void OnLinkMessage(uint32_t type, const uint8_t* data, uint32_t size)
             g_winGoal(game::GoalManager(), name);
             g_remote = false;
             ShareNextStage(name);
+            game::SpawnScript("coop_after_goal_won");
         }
         break;
     case link::kGoalDone:
@@ -833,6 +854,7 @@ void OnLinkMessage(uint32_t type, const uint8_t* data, uint32_t size)
                 g_winGoal(game::GoalManager(), name);
                 link::Send(link::kGoalWon, &name, sizeof(name));
                 ShareNextStage(name);
+                game::SpawnScript("coop_after_goal_won");
             } else {
                 Log("shared goal %08X done by peer", name);
                 g_peerDone.insert(name);
@@ -885,9 +907,10 @@ bool __cdecl CoopBeforeLevelChange(game::CStruct*, game::CScript*)
     ForgetSharedGoals();
     return true;
 }
-// CoopSharedGoal goal_id=<goal> mode=start | joined: false when shared goals are off or no co-op session.
+// CoopSharedGoal goal_id=<goal> mode=start | joined | waiting: false when shared goals are off or no co-op session.
 // start: this player took the goal from its NPC - it starts for the other player too (coop_remote_start_goal there).
 // joined: both run it now (the other player's game started it too).
+// waiting: whether this player has done it and waits for the other (taking it again wouldn't count).
 bool __cdecl CoopSharedGoal(game::CStruct* params, game::CScript*)
 {
     uint32_t goal = 0, mode = 0;
@@ -906,6 +929,8 @@ bool __cdecl CoopSharedGoal(game::CStruct* params, game::CScript*)
         ForgetSharedGoal(goal);
         g_sharedGoals.insert(goal);
         Log("shared goal %08X: both run it", goal);
+    } else if (mode == game::Checksum("waiting")) {
+        return g_localDone.count(goal) != 0; // done here, the other player still at it
     }
     return true;
 }
@@ -1020,22 +1045,61 @@ bool __cdecl CoopSendSpawn(game::CStruct* params, game::CScript*)
     return true;
 }
 
-// The client plays the host's story: its own story progress (OptionsAndPros) is neither saved nor loaded in co-op,
-// so the host's career isn't written into the friend's save and the synced one isn't replaced.
+// The client plays the host's story: a story save (OptionsAndPros) in co-op saves the friend's own story (below), and
+// none is loaded, so the synced one isn't replaced.
 constexpr uint32_t kType = 0x7321A8D6, kOptionsAndPros = 0xB010F357;
 bool ClientStoryFile(game::CStruct* params)
 {
     uint32_t type = 0;
     return g_role == Role::Client && params && game::GetChecksumNamed(params, kType, &type) && type == kOptionsAndPros;
 }
+// The friend saves their own story: while the save is written, their own career and chapter info are put in (the
+// host's go back right after, in the same frame), and the goal manager's params the save asks for are their own.
+// Earlier the save was refused with a message, which looked like a save error.
+game::CStruct* g_saveGoalParams = nullptr;
+constexpr uintptr_t kSaveGoalParamsCall = 0x005A7B9C; // WriteSaveContents (OptionsAndPros): the goal manager's params
+
+game::CStruct* __fastcall GoalParamsForSave(void* goalManager, void*)
+{
+    if (g_saveGoalParams)
+        return g_saveGoalParams;
+    return reinterpret_cast<game::CStruct*(__thiscall*)(void*)>(0x004A2BA0)(goalManager);
+}
+
+void ReadCareerAndChapters(game::CStruct* s)
+{
+    reinterpret_cast<void(__thiscall*)(void*, game::CStruct*)>(game::kCareerReadFromStructure)(game::Career(), s);
+    reinterpret_cast<void(__thiscall*)(void*, game::CStruct*)>(game::kReadChapterInfo)(nullptr, s);
+}
+
 bool __cdecl SaveToMemoryCardHook(game::CStruct* params, game::CScript* script)
 {
-    if (ClientStoryFile(params)) {
-        Log("client: story save refused (the host saves the co-op story)");
+    auto save = reinterpret_cast<game::CFunc>(0x005A97E0);
+    if (!ClientStoryFile(params) || g_ownCareer.empty())
+        return save(params, script);
+    static uint8_t hostStory[0x20000];
+    if (!WriteCareer(hostStory, sizeof(hostStory))) {
+        Log("client: save refused (the host's story couldn't be kept aside)");
         game::SpawnScript("coop_client_save_refused");
         return false;
     }
-    return reinterpret_cast<game::CFunc>(0x005A97E0)(params, script);
+    game::CStruct* own = game::NewStruct();
+    game::ReadFromBuffer(own, g_ownCareer.data());
+    ReadCareerAndChapters(own);
+    game::CStruct* ownGoals = nullptr;
+    if (game::GetStructureNamed(own, kCoopGoalManager, &ownGoals))
+        g_saveGoalParams = ownGoals;
+    bool saved = save(params, script);
+    g_saveGoalParams = nullptr;
+    game::CStruct* host = game::NewStruct();
+    game::ReadFromBuffer(host, hostStory);
+    ReadCareerAndChapters(host);
+    game::FreeStruct(host);
+    game::FreeStruct(own);
+    Log("client: own story saved: %s", saved ? "ok" : "failed");
+    if (saved)
+        game::SpawnScript("coop_client_saved_own");
+    return saved;
 }
 bool __cdecl LoadFromMemoryCardHook(game::CStruct* params, game::CScript* script)
 {
@@ -1107,6 +1171,7 @@ bool PatchTable()
 
 using VoidFn = void(__cdecl*)();
 VoidFn g_readKeyboard = nullptr;
+bool g_escapeTyped = false; // Esc typed (Sio::KeyInput): the chat box closes (coop_chat_escape) next frame
 
 bool OurWindowHasFocus()
 {
@@ -1147,8 +1212,38 @@ struct Goto {
 } g_goto;
 constexpr int kKeyW = 0x11, kKeyA = 0x1E, kKeyD = 0x20;
 
+// Co-op ends for this player: the friend goes back to the main menu with their own story; the host's level reloads
+// for single player (the friend is told the host left).
+void LeaveCoop()
+{
+    if (g_role == Role::Host) {
+        Log("leave: the host ends co-op");
+        // The friend goes first (its skater is then hidden and removed at the cleanup, as when a friend quits):
+        // a level cleanup with the friend's skater still in the game crashed.
+        if (link::Connected())
+            link::Send(link::kHostLeft, nullptr, 0);
+        game::SpawnScript("coop_host_leave");
+    } else if (g_role == Role::Client) {
+        Log("leave: the friend leaves");
+        bool inGame = g_selfJoined;
+        g_role = Role::None; // (its own story comes back at the main menu)
+        g_selfJoined = false;
+        link::Close();
+        if (inGame)
+            game::SpawnScript("coop_client_leave");
+    }
+}
+
 bool AutomationCommand(const char* verb, const char* arg, int value)
 {
+    if (std::strcmp(verb, "pad") == 0) { // test only: "pad a+lx=0.8 <ms>", a gamepad's buttons and sticks held
+        gamepad::Inject(arg, value);
+        return true;
+    }
+    if (std::strcmp(verb, "leave") == 0) { // test only: as the leave key pressed twice
+        LeaveCoop();
+        return true;
+    }
     if (std::strcmp(verb, "goto") == 0) {
         g_goto.active = true;
         g_goto.target = std::strcmp(arg, "friend") == 0 ? 0xFFFFFFFF : game::Checksum(arg);
@@ -1264,8 +1359,69 @@ void SteerBot()
     }
 }
 
+// --- hang watch ---------------------------------------------------------------------------------------------------
+
+// The host's game stood still for 30-40 s a few times in a real session (no frames, then Windows' "not responding").
+// A thread watches the frames: when none came for 5 s it looks where the game's main thread is (its instruction
+// pointer and the game's return addresses on its stack) and logs it, and how long the stall lasted once it's over.
+HANDLE g_mainThread = nullptr;
+volatile DWORD g_lastFrame = 0;
+
+DWORD WINAPI HangWatch(void*)
+{
+    bool stalled = false;
+    DWORD stallStart = 0;
+    for (;;) {
+        Sleep(1000);
+        DWORD last = g_lastFrame, now = GetTickCount();
+        if (!last)
+            continue;
+        if (now - last < 5000) {
+            if (stalled)
+                Log("hang watch: frames again after %lu ms", now - stallStart);
+            stalled = false;
+            continue;
+        }
+        if (stalled)
+            continue;
+        stalled = true;
+        stallStart = last;
+        uint32_t eip = 0, found = 0, trace[16];
+        CONTEXT c = {};
+        c.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+        if (SuspendThread(g_mainThread) != static_cast<DWORD>(-1)) {
+            if (GetThreadContext(g_mainThread, &c)) {
+                eip = c.Eip;
+                const auto* stack = reinterpret_cast<const uint32_t*>(c.Esp);
+                for (int i = 0; i < 2048 && found < 16; ++i) {
+                    MEMORY_BASIC_INFORMATION mbi;
+                    if (!VirtualQuery(stack + i, &mbi, sizeof(mbi)) || mbi.State != MEM_COMMIT)
+                        break;
+                    uint32_t v = stack[i];
+                    if (v >= 0x00401000 && v < 0x00645000)
+                        trace[found++] = v;
+                }
+            }
+            ResumeThread(g_mainThread);
+        }
+        char line[256] = "";
+        int n = 0;
+        for (uint32_t i = 0; i < found; ++i)
+            n += std::snprintf(line + n, sizeof(line) - n, " %08X", trace[i]);
+        char module[MAX_PATH] = "?";
+        HMODULE owner = nullptr;
+        if (GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                               reinterpret_cast<LPCSTR>(static_cast<uintptr_t>(eip)), &owner))
+            GetModuleFileNameA(owner, module, sizeof(module));
+        const char* base = std::strrchr(module, '\\');
+        Log("hang watch: no frame for %lu ms (window %s); main thread at %08X in %s; game stack:%s", now - last,
+            OurWindowHasFocus() ? "in front" : "in the background", eip, base ? base + 1 : module, line);
+    }
+}
+
 void __cdecl OnFrame()
 {
+    g_lastFrame = GetTickCount();
     if (g_settings.automation) {
         automation::Update(&SpawnByName, &AutomationCommand);
         SteerBot();
@@ -1348,10 +1504,31 @@ void __cdecl OnFrame()
         Log("teleport key: coop_teleport_request");
         game::SpawnScript("coop_teleport_request");
     }
-    static bool f9;
-    if (Pressed(VK_F9, f9) && focus && g_settings.debugHotkeys) {
-        Log("F9: coop_debug_f9");
+    static bool f8;
+    if (Pressed(VK_F8, f8) && focus && g_settings.debugHotkeys) {
+        Log("F8: coop_debug_f9");
         game::SpawnScript("coop_debug_f9");
+    }
+    if (g_escapeTyped) {
+        g_escapeTyped = false;
+        game::SpawnScript("coop_chat_escape");
+    }
+    // [keys] leave: co-op ends for this player (pressed twice within 4 s). The friend goes back to the main menu
+    // with their own story; the host's level reloads for single player (the friend is told the host left).
+    static bool leaveDown;
+    static DWORD leaveArmed = 0;
+    if (Pressed(g_settings.leaveKey, leaveDown) && focus && g_role != Role::None) {
+        if (!leaveArmed || GetTickCount() - leaveArmed > 4000) {
+            leaveArmed = GetTickCount();
+            game::CStruct* params = game::NewStruct();
+            reinterpret_cast<void(__thiscall*)(game::CStruct*, uint32_t, const char*)>(game::kStructAddString)(
+                params, game::Checksum("text"), "Co-op: press the leave key again to leave");
+            game::SpawnScriptChecksum(game::Checksum("coop_leave_confirm"), params);
+            game::FreeStruct(params);
+        } else {
+            leaveArmed = 0;
+            LeaveCoop();
+        }
     }
     if (Pressed(g_settings.joinKey, f11) && focus) {
         Log("join key: coop_join_start");
@@ -1676,39 +1853,42 @@ bool InstallNameHook()
 
 // Sio::KeyInput (0x005BDE70, cdecl key, flags): a typed character from the window's WM_CHAR - the chat box, names.
 // The window is ANSI, so a Russian layout types code page bytes (cp1251) and the game's fonts have no Cyrillic:
-// the letters showed as Western accented ones or boxes. They're typed transliterated instead (Привет -> Privet).
+// the letters showed as Western accented ones or boxes. They're typed as the Latin character on the same key of
+// an English keyboard instead (й -> q, Ж -> :), as if the layout were switched.
 using KeyInputFn = void(__cdecl*)(int, int);
 KeyInputFn g_keyInput = nullptr;
 
-const char* Transliterate(wchar_t c)
+// The character the key that types c in the input language gives on a US keyboard, 0 if none (AltGr, not on it).
+char UsKeyCharacter(wchar_t c)
 {
-    static const char* const kLower[32] = {"a", "b", "v", "g", "d", "e", "zh", "z", "i", "y", "k", "l", "m", "n", "o",
-                                           "p", "r", "s", "t", "u", "f", "h", "ts", "ch", "sh", "sch", "", "y", "",
-                                           "e", "yu", "ya"};
-    static const char* const kUpper[32] = {"A", "B", "V", "G", "D", "E", "Zh", "Z", "I", "Y", "K", "L", "M", "N", "O",
-                                           "P", "R", "S", "T", "U", "F", "H", "Ts", "Ch", "Sh", "Sch", "", "Y", "",
-                                           "E", "Yu", "Ya"};
-    if (c >= 0x0410 && c <= 0x042F)
-        return kUpper[c - 0x0410];
-    if (c >= 0x0430 && c <= 0x044F)
-        return kLower[c - 0x0430];
-    switch (c) {
-    case 0x0401: return "Yo";  case 0x0451: return "yo";  // Ё ё
-    case 0x0404: return "Ye";  case 0x0454: return "ye";  // Є є
-    case 0x0406: return "I";   case 0x0456: return "i";   // І і
-    case 0x0407: return "Yi";  case 0x0457: return "yi";  // Ї ї
-    case 0x040E: return "U";   case 0x045E: return "u";   // Ў ў
-    case 0x0490: return "G";   case 0x0491: return "g";   // Ґ ґ
-    case 0x2116: return "N";                               // №
-    case 0x00AB: case 0x00BB: case 0x201C: case 0x201D: case 0x201E: return "'"; // quotes
-    case 0x2013: case 0x2014: return "-";
+    const SHORT key = VkKeyScanExW(c, GetKeyboardLayout(0));
+    if (key == -1 || (HIBYTE(key) & ~1))
+        return 0;
+    const uint8_t vk = LOBYTE(key);
+    const bool shift = (HIBYTE(key) & 1) != 0;
+    if (vk >= 'A' && vk <= 'Z')
+        return static_cast<char>(shift ? vk : vk + ('a' - 'A'));
+    if (vk >= '0' && vk <= '9')
+        return shift ? ")!@#$%^&*("[vk - '0'] : static_cast<char>(vk);
+    switch (vk) {
+    case VK_OEM_1: return shift ? ':' : ';';
+    case VK_OEM_PLUS: return shift ? '+' : '=';
+    case VK_OEM_COMMA: return shift ? '<' : ',';
+    case VK_OEM_MINUS: return shift ? '_' : '-';
+    case VK_OEM_PERIOD: return shift ? '>' : '.';
+    case VK_OEM_2: return shift ? '?' : '/';
+    case VK_OEM_3: return shift ? '~' : '`';
+    case VK_OEM_4: return shift ? '{' : '[';
+    case VK_OEM_5: return shift ? '|' : '\\';
+    case VK_OEM_6: return shift ? '}' : ']';
+    case VK_OEM_7: return shift ? '"' : '\'';
     }
-    return nullptr;
+    return 0;
 }
 
-// The character a typed byte is: in the input language's code page (Windows converts WM_CHAR for an ANSI window
-// with it), else in the system's.
-wchar_t TypedCharacter(char byte)
+// The US key character for a typed byte: read in the input language's code page (Windows converts WM_CHAR for an
+// ANSI window with it), else in the system's.
+char UsKeyCharacterOf(char byte)
 {
     char cp[8] = "";
     LCID locale = MAKELCID(LOWORD(reinterpret_cast<uintptr_t>(GetKeyboardLayout(0))), SORT_DEFAULT);
@@ -1716,18 +1896,20 @@ wchar_t TypedCharacter(char byte)
                      CP_ACP};
     for (UINT page : pages) {
         wchar_t wide = 0;
-        if (page != 0 && MultiByteToWideChar(page, 0, &byte, 1, &wide, 1) == 1 && Transliterate(wide))
-            return wide;
+        if (page != 0 && MultiByteToWideChar(page, 0, &byte, 1, &wide, 1) == 1)
+            if (char latin = UsKeyCharacter(wide))
+                return latin;
     }
     return 0;
 }
 
 void __cdecl KeyInputHook(int key, int flags)
 {
+    if (key == 0x1B && flags >= 0 && !(flags & 0x40000000))
+        g_escapeTyped = true;
     if (key >= 0x80 && key <= 0xFF) {
-        if (const char* latin = Transliterate(TypedCharacter(static_cast<char>(key)))) {
-            for (; *latin; ++latin)
-                g_keyInput(static_cast<uint8_t>(*latin), flags);
+        if (char latin = UsKeyCharacterOf(static_cast<char>(key))) {
+            g_keyInput(static_cast<uint8_t>(latin), flags);
             return;
         }
     }
@@ -1964,6 +2146,170 @@ bool InstallStandInGuards()
            GuardFoundObject(0x00463CBD, {}, 0x00463D3C);                // DestroyObjects: on to deleting the stand-in
 }
 
+// --- widescreen -----------------------------------------------------------------------------------------------
+
+// From PARTYMOD for THUG2 (https://github.com/PARTYMANX/partymod-thug2, src/gfx.c, MIT License, Copyright (c) 2024
+// PARTYMANX; see THIRD_PARTY_NOTICES.txt): the same addresses (THUG2PM.exe has this exe's layout). On a wider screen than 4:3 the 3D view widens
+// (the screen angle factor) instead of stretching; the main menu stays 4:3 with black bars at the sides, since its
+// wheel's labels are placed for 4:3 and drifted off their slices when stretched; screen flashes cover the screen.
+constexpr uintptr_t kLetterboxActive = 0x00786CBE;
+float& ConvX() { return *reinterpret_cast<float*>(0x00786D80); }
+float& ConvY() { return *reinterpret_cast<float*>(0x00786D84); }
+uint32_t& ConvXOffset() { return *reinterpret_cast<uint32_t*>(0x00786D88); }
+uint32_t& ConvYOffset() { return *reinterpret_cast<uint32_t*>(0x00786D8C); }
+uint32_t BackBufferWidth() { return *reinterpret_cast<uint32_t*>(0x00786D6C); }
+uint32_t BackBufferHeight() { return *reinterpret_cast<uint32_t*>(0x00786D70); }
+
+float DesiredAspect()
+{
+    if (g_inMainMenu || !BackBufferHeight())
+        return 4.0f / 3.0f;
+    return static_cast<float>(BackBufferWidth()) / static_cast<float>(BackBufferHeight());
+}
+
+// 0x004A07C0: the 3D view's horizontal factor (the game's own value, 1.0 unless changed).
+float __cdecl ScreenAngleFactor()
+{
+    float aspect = DesiredAspect();
+    *reinterpret_cast<float*>(0x00701340) = aspect; // the screen's aspect ratio
+    float own = *reinterpret_cast<float*>(0x0067E544);
+    if (own != 1.0f)
+        return own;
+    return aspect > 4.0f / 3.0f ? aspect / (4.0f / 3.0f) : 1.0f; // (narrower: the vertical view grows instead)
+}
+
+// 0x004A0780: the aspect ratio set by the game.
+void __cdecl SetAspectRatio(float) { *reinterpret_cast<float*>(0x00701340) = DesiredAspect(); }
+
+// 0x004B2440: the 2D screen's scale and offsets for the desired aspect (bars where the screen is wider or taller).
+void __cdecl SetLetterbox(int letterboxed)
+{
+    float backBuffer = static_cast<float>(BackBufferWidth()) / static_cast<float>(BackBufferHeight());
+    float desired = DesiredAspect();
+    if (backBuffer > desired) {
+        ConvX() = (desired / backBuffer) * (BackBufferWidth() / 640.0f);
+        ConvY() = BackBufferHeight() / 480.0f;
+        uint32_t width = static_cast<uint32_t>(ConvX() * 640);
+        ConvXOffset() = (BackBufferWidth() - width) / 2;
+        ConvYOffset() = static_cast<uint32_t>(16 * ConvY());
+    } else {
+        ConvX() = BackBufferWidth() / 640.0f;
+        ConvY() = (backBuffer / desired) * (BackBufferHeight() / 480.0f);
+        uint32_t height = static_cast<uint32_t>(ConvY() * 480);
+        ConvXOffset() = 0;
+        ConvYOffset() = static_cast<uint32_t>(16 * ConvY()) + (BackBufferHeight() - height) / 2;
+    }
+    *reinterpret_cast<uint8_t*>(kLetterboxActive) = static_cast<uint8_t>(letterboxed);
+}
+
+// In the 3D and 2D viewport setup (letterboxed): the viewport is the desired aspect's region, centred.
+void __cdecl SetDisplayRegion()
+{
+    auto* display = reinterpret_cast<uint32_t*>(0x00786C90); // x, y, width, height
+    uint32_t width = static_cast<uint32_t>(ConvX() * 640), height = static_cast<uint32_t>(ConvY() * 480);
+    display[0] = (BackBufferWidth() - width) / 2;
+    display[2] = width;
+    display[1] = (BackBufferHeight() - height) / 2;
+    display[3] = height;
+}
+
+// The main loop's world render (0x0048C330): letterboxed (4:3) in the main menu only. (Left on, split screen drew
+// both views on top of each other.)
+void __cdecl RenderWorldWrapper()
+{
+    reinterpret_cast<void(__cdecl*)()>(0x0048C330)();
+    uint8_t want = g_inMainMenu ? 1 : 0;
+    if (*reinterpret_cast<uint8_t*>(kLetterboxActive) != want)
+        SetLetterbox(want);
+}
+
+struct BarVertex {
+    float x, y, z, w;
+    uint32_t color;
+    float u, v;
+};
+
+void DrawBar(float x0, float y0, float x1, float y1)
+{
+    BarVertex bar[4] = {{x0 - 0.5f, y0 - 0.5f, 0, 1, 0xFF000000, 0, 0},
+                        {x0 - 0.5f, y1 + 0.5f, 0, 1, 0xFF000000, 0, 0},
+                        {x1 + 0.5f, y1 + 0.5f, 0, 1, 0xFF000000, 0, 0},
+                        {x1 + 0.5f, y0 - 0.5f, 0, 1, 0xFF000000, 0, 0}};
+    void* device = *reinterpret_cast<void**>(0x007D69E0);
+    using DrawPrimitiveUP = long(__stdcall*)(void*, int, unsigned, const void*, unsigned);
+    reinterpret_cast<DrawPrimitiveUP>((*reinterpret_cast<void***>(device))[83])(device, 6, 2, bar, sizeof(BarVertex)); // fan
+}
+
+// After the 2D draw (0x004DFB90): black bars over what the 3D drew outside the desired aspect.
+void __cdecl Draw2DWrapper()
+{
+    reinterpret_cast<void(__cdecl*)()>(0x004DFB90)();
+    float w = static_cast<float>(BackBufferWidth()), h = static_cast<float>(BackBufferHeight());
+    if (!h)
+        return;
+    float desired = DesiredAspect();
+    if (w / h > desired) {
+        float width = std::round(ConvX() * 640.0f), bar = std::floor((w - width) / 2);
+        reinterpret_cast<void(__cdecl*)(int, int, int)>(0x004DA730)(0, 0, 0); // no texture
+        DrawBar(0, 0, bar, h);
+        DrawBar(bar + width, 0, w, h);
+    } else if (w / h < desired) {
+        float height = std::round(ConvY() * 480.0f), bar = std::floor((h - height) / 2);
+        reinterpret_cast<void(__cdecl*)(int, int, int)>(0x004DA730)(0, 0, 0);
+        DrawBar(0, 0, w, bar);
+        DrawBar(0, bar + height, w, h);
+    }
+}
+
+// A screen flash's vertices come in the wrong order (it covered part of the screen): reordered before the draw.
+void __fastcall FlashDraw(void*, void** vtable, void* device, int primitive, unsigned count, BarVertex* vertices, unsigned stride)
+{
+    BarVertex first = vertices[0];
+    vertices[0] = vertices[1];
+    vertices[1] = vertices[2];
+    vertices[2] = first;
+    using DrawPrimitiveUP = long(__stdcall*)(void*, int, unsigned, const void*, unsigned);
+    reinterpret_cast<DrawPrimitiveUP>(vtable[83])(device, primitive, count, vertices, stride);
+}
+
+void ApplyWidescreen()
+{
+    const uint8_t aspect[] = {0x8B, 0x44, 0x24, 0x04, 0xA3, 0x40, 0x13, 0x70, 0x00, 0xC3};
+    const uint8_t angle[] = {0xD9, 0x05, 0x44, 0xE5, 0x67, 0x00, 0xC3};
+    const uint8_t letterbox[] = {0x8A, 0x44, 0x24, 0x04, 0x84, 0xC0, 0xA0, 0xBE, 0x6C, 0x78, 0x00};
+    const uint8_t fixJe[] = {0x74, 0x5E};
+    const uint8_t view3d[] = {0x74, 0x3A, 0x8B, 0x0D, 0x70, 0x6D, 0x78, 0x00};
+    const uint8_t view2d[] = {0x74, 0x23, 0x8B, 0xC1, 0x99};
+    const uint8_t flash[] = {0xFF, 0x92, 0x4C, 0x01, 0x00, 0x00};
+    const uint8_t call[] = {0xE8};
+    if (!patch::Matches(0x004A0780, aspect, sizeof(aspect)) || !patch::Matches(0x004A07C0, angle, sizeof(angle)) ||
+        !patch::Matches(0x004B2440, letterbox, sizeof(letterbox)) || !patch::Matches(0x004DF63A, fixJe, 2) ||
+        !patch::Matches(0x004B2E63, view3d, sizeof(view3d)) || !patch::Matches(0x004B33C8, view2d, sizeof(view2d)) ||
+        !patch::Matches(0x004B91E7, flash, sizeof(flash)) || !patch::Matches(0x0044F1C0, call, 1) ||
+        !patch::Matches(0x004B341D, call, 1)) {
+        Log("widescreen: unexpected bytes, left as it was");
+        return;
+    }
+    patch::Jump(0x004A0780, reinterpret_cast<void*>(&SetAspectRatio));
+    patch::Jump(0x004A07C0, reinterpret_cast<void*>(&ScreenAngleFactor));
+    patch::Jump(0x004B2440, reinterpret_cast<void*>(&SetLetterbox));
+    const uint8_t jmp = 0xEB; // the letterboxed display's fix
+    patch::Write(0x004DF63A, &jmp, 1);
+    auto callAt = [](uintptr_t site, size_t size, void* target) { // `call target`, the rest of the bytes NOPs
+        std::vector<uint8_t> code(size, 0x90);
+        code[0] = 0xE8;
+        int32_t rel = static_cast<int32_t>(reinterpret_cast<uintptr_t>(target) - (site + 5));
+        std::memcpy(&code[1], &rel, 4);
+        patch::Write(site, code.data(), size);
+    };
+    callAt(0x004B2E65, 58, reinterpret_cast<void*>(&SetDisplayRegion));
+    callAt(0x004B33CA, 35, reinterpret_cast<void*>(&SetDisplayRegion));
+    callAt(0x004B91E7, 6, reinterpret_cast<void*>(&FlashDraw));
+    patch::RetargetCall(0x0044F1C0, reinterpret_cast<void*>(&RenderWorldWrapper));
+    patch::RetargetCall(0x004B341D, reinterpret_cast<void*>(&Draw2DWrapper));
+    Log("widescreen: on (main menu 4:3)");
+}
+
 // --- install ---------------------------------------------------------------------------------------------------
 
 // Two copies on one PC read the same archives at once; the game opens them without sharing, so one of them failed
@@ -1980,10 +2326,36 @@ HANDLE WINAPI SharedCreateFile(LPCSTR name, DWORD access, DWORD share, LPSECURIT
 
 // [display] resolution: the device setup (0x004D870B) picks one of 4 modes (1280x1024 ... 640x480) by
 // Launcher.exe's setting; it always takes the last one here, and that one gets the resolution from coop.ini.
+// A wider picture than 1920 crashed the game half a second after it started (the same with 2560x1080 as 3840x2160):
+// 0x004B6B80 fills a table at 0x00701688 (12-byte entries, room for 1280 up to 0x00705288) with one entry per
+// some fraction of the screen's width squared, and the table ran over the globals after it (the loading screen's
+// colours, its thread's event, the object deleted at 0x004B6FA7). Nothing reads the table, so the count (the second
+// float-to-int at 0x004B6C1B) is capped at 1280.
+void CapWideScreenTable()
+{
+    const uint8_t call[] = {0xE8};
+    if (!patch::Matches(0x004B6C1B, call, 1)) {
+        Log("resolution: unexpected bytes at the table's count");
+        return;
+    }
+    auto* stub = static_cast<uint8_t*>(VirtualAlloc(nullptr, 32, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
+    uint8_t code[] = {0xE8, 0, 0, 0, 0,             // call the float-to-int (0x006236FC)
+                      0x3D, 0x00, 0x05, 0x00, 0x00, // cmp eax, 1280
+                      0x7E, 0x05,                   // jle done
+                      0xB8, 0x00, 0x05, 0x00, 0x00, // mov eax, 1280
+                      0xC3};                        // done: ret
+    int32_t rel = static_cast<int32_t>(0x006236FC - (reinterpret_cast<uintptr_t>(stub) + 5));
+    std::memcpy(code + 1, &rel, 4);
+    std::memcpy(stub, code, sizeof(code));
+    if (patch::RetargetCall(0x004B6C1B, stub) != 0x006236FC)
+        Log("resolution: unexpected call at the table's count");
+}
+
 void ApplyResolution()
 {
     if (!g_settings.screenWidth)
         return;
+    CapWideScreenTable();
     const uint8_t select[] = {0xBE, 0x03, 0x00, 0x00, 0x00, 0x2B, 0xF2};        // mov esi,3; sub esi,[setting]
     const uint8_t width[] = {0xC7, 0x44, 0x24, 0x38, 0x80, 0x02, 0x00, 0x00};  // mov [esp+38h],640
     const uint8_t height[] = {0xC7, 0x44, 0x24, 0x28, 0xE0, 0x01, 0x00, 0x00}; // mov [esp+28h],480
@@ -1999,9 +2371,64 @@ void ApplyResolution()
     Log("resolution %dx%d", g_settings.screenWidth, g_settings.screenHeight);
 }
 
+// In a window (windowed or borderless) the game keeps running when another window is in front, and isn't minimised:
+// on WM_ACTIVATE (0x004E1705) it minimised itself when it lost focus, flagged its Direct3D device to be reset, and
+// maximised the window back when it got focus again. In a window that lost the window (it was gone after Alt+Tab),
+// and each reset dropped OBS's game capture. Now WM_ACTIVATE only keeps the game active and goes on to
+// DefWindowProc as the other messages do (0x004E17E1 with the message in eax).
+void PatchActivateForWindow()
+{
+    const uint8_t handler[] = {0x8B, 0x44, 0x24, 0x0C, 0x25, 0xFF, 0xFF, 0x00, 0x00};
+    if (!patch::Matches(0x004E1705, handler, sizeof(handler))) {
+        Log("display: unexpected WM_ACTIVATE handler");
+        return;
+    }
+    uint8_t code[] = {0xC6, 0x05, 0xE4, 0xCB, 0x7C, 0x00, 0x01, // mov byte [0x007CCBE4], 1 (active)
+                      0xB8, 0x06, 0x00, 0x00, 0x00,             // mov eax, WM_ACTIVATE
+                      0xE9, 0, 0, 0, 0};                        // jmp 0x004E17E1 (DefWindowProc)
+    int32_t rel = static_cast<int32_t>(0x004E17E1 - (0x004E1705 + sizeof(code)));
+    std::memcpy(code + 13, &rel, 4);
+    patch::Write(0x004E1705, code, sizeof(code));
+}
+
+// After the device is made, SetWindowPos(0, 0, the back buffer's size) would put a window at the screen's corner at
+// the back buffer's size: in a window it stays as made (as PartyMod does).
+void KeepWindowAsMade()
+{
+    const uint8_t moveWindow[] = {0x6A, 0x04, 0x50, 0x51, 0x53, 0x53, 0x53, 0x52, 0xFF, 0x15, 0x20, 0x52, 0x64, 0x00};
+    if (patch::Matches(0x004D8891, moveWindow, sizeof(moveWindow))) {
+        uint8_t nops[sizeof(moveWindow)];
+        std::memset(nops, 0x90, sizeof(nops));
+        patch::Write(0x004D8891, nops, sizeof(nops));
+    }
+}
+
+// [display] mode=borderless: the game's own full-screen window (a popup over the whole primary screen, 0x005F595F),
+// not topmost, with Direct3D in windowed mode: the picture (the resolution's size) is stretched over it. Alt+Tab,
+// OBS's window or game capture, Discord and overlays work as with any window; no display mode change.
+void ApplyBorderless()
+{
+    const uint8_t present[] = {0x89, 0x1D};
+    const uint8_t topmost[] = {0xC7, 0x44, 0x24, 0x70, 0x08, 0x00, 0x00, 0x00}; // mov [esp+70h], WS_EX_TOPMOST
+    if (!patch::Matches(0x004D871F, present, 2) || !patch::Matches(0x005F596D, topmost, sizeof(topmost))) {
+        Log("display: unexpected bytes, full screen");
+        return;
+    }
+    const uint8_t windowedFlag = 0x05; // mov [pp.Windowed], eax (= 1)
+    patch::Write(0x004D8720, &windowedFlag, 1);
+    const uint8_t noExStyle = 0x00;
+    patch::Write(0x005F5971, &noExStyle, 1);
+    KeepWindowAsMade();
+    PatchActivateForWindow();
+    Log("display: borderless %dx%d on a %dx%d screen", g_settings.screenWidth, g_settings.screenHeight,
+        GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
+}
+
 void ApplyDebugPatches()
 {
-    // The same bytes as the old THUG2_coop_test.exe, for running two windows on one PC.
+    if (g_settings.displayMode == 1)
+        ApplyBorderless();
+    // mode=windowed: a window with a frame (also for running two copies on one PC).
     if (g_settings.windowed) {
         const uint8_t present[] = {0x89, 0x1D};
         const uint8_t style[] = {0x0F, 0x85};
@@ -2010,7 +2437,7 @@ void ApplyDebugPatches()
             patch::Write(0x004D8720, &windowedFlag, 1);
             const uint8_t nops[6] = {0x90, 0x90, 0x90, 0x90, 0x90, 0x90}; // bordered window, not full screen
             patch::Write(0x005F58D3, nops, 6);
-            Log("debug: windowed");
+            Log("display: windowed");
         }
         // The window (made 640x480 at 100,100 in WinMain): the resolution's size, centred; scaled down to fit the
         // screen's work area if it doesn't (the picture keeps its resolution, Direct3D stretches it to the window).
@@ -2032,16 +2459,11 @@ void ApplyDebugPatches()
             patch::WriteU32(0x004E2752, static_cast<uint32_t>(width));
             const uint8_t centred[4] = {0x6A, 0xFF, 0x6A, 0xFF}; // x, y -1: centred
             patch::Write(0x004E2756, centred, 4);
-            // After the device is made, SetWindowPos(0, 0, the back buffer's size) would put the frame at the corner
-            // and the inside smaller: the window stays as made (as PartyMod does).
-            const uint8_t moveWindow[] = {0x6A, 0x04, 0x50, 0x51, 0x53, 0x53, 0x53, 0x52, 0xFF, 0x15, 0x20, 0x52, 0x64, 0x00};
-            if (patch::Matches(0x004D8891, moveWindow, sizeof(moveWindow))) {
-                uint8_t nops[sizeof(moveWindow)];
-                std::memset(nops, 0x90, sizeof(nops));
-                patch::Write(0x004D8891, nops, sizeof(nops));
-            }
-            Log("debug: window %dx%d", width, height);
+            KeepWindowAsMade();
+            Log("display: window %dx%d", width, height);
         }
+        if (!g_settings.alwaysActive)
+            PatchActivateForWindow();
     }
     if (g_settings.multiInstance) {
         const uint8_t je[] = {0x74, 0x2E};
@@ -2121,6 +2543,8 @@ bool Install()
     if (*reinterpret_cast<uint32_t*>(0x0067F860 + 4) == 0x005A97E0 && *reinterpret_cast<uint32_t*>(0x0067F868 + 4) == 0x005A8730) {
         patch::WriteU32(0x0067F860 + 4, reinterpret_cast<uint32_t>(&SaveToMemoryCardHook));
         patch::WriteU32(0x0067F868 + 4, reinterpret_cast<uint32_t>(&LoadFromMemoryCardHook));
+        if (patch::RetargetCall(kSaveGoalParamsCall, reinterpret_cast<void*>(&GoalParamsForSave)) != 0x004A2BA0)
+            Log("save goal params hook: unexpected old target");
     } else {
         Log("save hooks: unexpected table entries");
     }
@@ -2158,7 +2582,10 @@ bool Install()
         Log("component guard: unexpected bytes");
     if (g_settings.name[0]) // the player's network name (as -NAME on the command line): shown over their skater
         std::memcpy(reinterpret_cast<void*>(0x007CCBC4), g_settings.name, sizeof(g_settings.name));
+    if (g_settings.gamepad && !gamepad::Install(&Log))
+        Log("gamepad: unexpected bytes, no XInput pads");
     ApplyResolution();
+    ApplyWidescreen();
     ApplyDebugPatches();
     Log("installed (host %s:%d; keys host %X join %X teleport %X)", g_settings.hostAddress, g_settings.port,
         g_settings.hostKey, g_settings.joinKey, g_settings.teleportKey);
@@ -2249,16 +2676,30 @@ extern "C" HRESULT WINAPI DirectInput8Create(HINSTANCE instance, DWORD version, 
     HRESULT result = real ? real(instance, version, iid, out, outer) : E_FAIL;
     if (SUCCEEDED(result) && out && g_settings.automation)
         automation::WrapDirectInput(*out);
+    if (SUCCEEDED(result) && out && g_settings.gamepad)
+        gamepad::WrapDirectInput(*out);
     return result;
 }
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD reason, LPVOID)
 {
     if (reason == DLL_PROCESS_ATTACH) {
+        // coop.log grows across sessions; past 4 MB it becomes coop.prev.log (one old one kept) and a new one starts.
+        WIN32_FILE_ATTRIBUTE_DATA info;
+        if (GetFileAttributesExA("coop.log", GetFileExInfoStandard, &info) && (info.nFileSizeHigh || info.nFileSizeLow > 4u << 20))
+            MoveFileExA("coop.log", "coop.prev.log", MOVEFILE_REPLACE_EXISTING);
         g_log = std::fopen("coop.log", "a");
+        SetProcessDPIAware(); // real pixels on a scaled desktop (125%, 150%): the resolution, the window's size
+        SYSTEMTIME t;
+        GetLocalTime(&t);
+        if (g_log)
+            std::fprintf(g_log, "\n=== %04d-%02d-%02d game started ===\n", t.wYear, t.wMonth, t.wDay);
         LoadSettings();
         AddVectoredExceptionHandler(0, &OnException);
-        Install();
+        DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &g_mainThread,
+                        THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION, FALSE, 0);
+        if (Install() && g_mainThread)
+            CloseHandle(CreateThread(nullptr, 0, &HangWatch, nullptr, 0, nullptr));
     }
     return TRUE;
 }

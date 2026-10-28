@@ -16,7 +16,7 @@
 **The host's jump on the friend's screen / Прыжок хоста виден у друга**
 ![Jump](docs/03_jump.png)
 
-**Chat: Russian is transliterated by itself / Чат: русский текст сам пишется латиницей**
+**Chat / Чат**
 ![Chat](docs/05_chat.png)
 
 **The friend took a goal from an NPC, it started for both / Друг взял задание у NPC, оно запустилось у обоих**
@@ -50,9 +50,13 @@ NPCs, cutscenes, goals.
 - Cutscenes and goal cameras play for both; a skip (Esc / num2) by either player skips them for both.
 - Shared goals: a goal one player takes starts for both and is won once both have done it.
 - Your friend's name and distance over their skater (visible through walls), teleport to your friend,
-  chat with Cyrillic transliteration.
+  chat (a Cyrillic layout types the Latin letters on the same keys).
 - Guest characters and the pro teammate are synced.
 - Optional skater collision (`player_collision=1`).
+- XInput gamepads (Xbox; PlayStation through Steam Input or DS4Windows).
+- Borderless window by default (OBS / Discord capture, Alt+Tab), any resolution up to 4K, a wider (not stretched)
+  view on wide screens, the main menu kept 4:3.
+- Leave co-op with a key (F9 twice); the friend's save in co-op keeps their own story.
 
 ### Install
 
@@ -82,9 +86,11 @@ Details: [README_EN.txt](README_EN.txt) (settings, controls, limits, troubleshoo
 | F10 | host: open co-op |
 | F11 | friend: join |
 | F12 | teleport to your friend |
-| Enter | chat |
+| F9 twice | leave co-op |
+| Enter | chat (Enter on an empty line or Esc closes it) |
 
-The keys can be changed in `coop.ini`, section `[keys]`.
+The keys can be changed in `coop.ini`, section `[keys]`. Gamepad: A ollie, X flip, B grab, Y grind, LB / RB spin,
+LT nollie, RT revert, sticks move and camera.
 
 ### Help wanted
 
@@ -94,13 +100,13 @@ Please attach `coop.log` from the game folder.
 
 ### Known issues
 
-- The game may crash on the splash screen at start (seen on Windows 11 and at 2K resolution). This isn't the mod:
-  plain THEMOD 1.3 does it too. Fix: run the game in a window - in `coop.ini`, section `[debug]`, set `windowed=1`
-  (the window has the resolution from `[display]`).
-
-- Resolution: set it in `coop.ini`, section `[display]`: `resolution=1920x1080` by default (`2560x1440`,
-  `1280x720`...; `launcher` - the one picked in `Launcher.exe`). In full screen your monitor must support it,
-  otherwise the game closes after the splash screen.
+- A crash on the splash screen at a picture wider than 1920 (the game itself, plain THEMOD 1.3 too) is fixed
+  by the mod now. If the game still crashes there, try `mode=windowed` in `coop.ini`, section `[display]`.
+- Display: `coop.ini`, section `[display]`: `mode=borderless` (default), `fullscreen` or `windowed`;
+  `resolution=desktop` (default, your monitor's) or `2560x1440`, `3840x2160`, `1280x720`... In `fullscreen` your
+  monitor must support it, otherwise the game closes after the splash screen.
+- World objects are each player's own (a wall one breaks stays whole for the other): so both can do each
+  shared goal themselves.
 
 ### Build
 
@@ -124,6 +130,8 @@ MIT, see [LICENSE](LICENSE). Tony Hawk's Underground 2 belongs to Activision, TH
 
 Made with [Claude Opus 5.5](https://www.anthropic.com/claude) in Claude Code, following the
 [coop-anything](https://github.com/cranebeaker/coop-anything) playbook.
+The wide screen code (wider view, 4:3 main menu, screen flash fix) and the gamepad layout come from
+[PARTYMOD for THUG2](https://github.com/PARTYMANX/partymod-thug2) by PARTYMANX (MIT).
 
 ### Support
 
@@ -141,9 +149,13 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 - Друг получает сюжет хоста (главы, выполненные цели, флаги мира) при входе и при каждой смене уровня.
 - Катсцены и камеры целей идут у обоих, пропуск (Esc / num2) у любого пропускает у обоих.
 - Общие задания: взятое одним задание запускается у обоих и засчитывается, когда его выполнят оба.
-- Имя и расстояние над другом (видно сквозь стены), телепорт к другу, чат с транслитом кириллицы.
+- Имя и расстояние над другом (видно сквозь стены), телепорт к другу, чат (на русской раскладке печатаются латинские буквы с тех же клавиш).
 - Гостевые персонажи и напарник-профи синхронизируются.
 - Коллизия скейтеров по желанию (`player_collision=1`).
+- Геймпады XInput (Xbox; PlayStation — через Steam Input или DS4Windows).
+- Окно без рамки по умолчанию (захват в OBS / Discord, Alt+Tab), любое разрешение до 4K, на широком экране обзор
+  шире (без растяжения), главное меню остаётся 4:3.
+- Выход из кооператива клавишей (F9 дважды); сохранение друга в кооперативе хранит его собственный сюжет.
 
 ### Установка
 
@@ -173,9 +185,11 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 | F10 | хост: открыть кооператив |
 | F11 | друг: подключиться |
 | F12 | телепорт к другу |
-| Enter | чат |
+| F9 дважды | выйти из кооператива |
+| Enter | чат (Enter на пустой строке или Esc закрывают его) |
 
-Клавиши меняются в `coop.ini`, раздел `[keys]`.
+Клавиши меняются в `coop.ini`, раздел `[keys]`. Геймпад: A — ollie, X — flip, B — grab, Y — grind, LB / RB —
+вращение, LT — nollie, RT — revert, стики — движение и камера.
 
 ### Нужна помощь
 
@@ -185,13 +199,13 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 
 ### Известные проблемы
 
-- Игра может вылетать на заставке при запуске (встречается на Windows 11 и на разрешении 2K). Это не из-за мода:
-  так же вылетает и обычный THEMOD 1.3. Решение: запускать игру в окне - в `coop.ini`, раздел `[debug]`,
-  поставьте `windowed=1` (окно будет в разрешении из `[display]`).
-
-- Разрешение задаётся в `coop.ini`, раздел `[display]`: по умолчанию `resolution=1920x1080` (`2560x1440`,
-  `1280x720`...; `launcher` — то, что выбрано в `Launcher.exe`). В полноэкранном режиме монитор должен его
-  поддерживать, иначе игра закроется после заставки.
+- Вылет на заставке при картинке шире 1920 (сама игра, и обычный THEMOD 1.3 тоже) теперь исправляет мод.
+  Если игра всё равно вылетает там, попробуйте `mode=windowed` в `coop.ini`, раздел `[display]`.
+- Экран: `coop.ini`, раздел `[display]`: `mode=borderless` (по умолчанию), `fullscreen` или `windowed`;
+  `resolution=desktop` (по умолчанию, как у монитора) или `2560x1440`, `3840x2160`, `1280x720`... В `fullscreen`
+  монитор должен поддерживать разрешение, иначе игра закроется после заставки.
+- Объекты мира у каждого свои (стена, сломанная одним, у другого целая): так оба могут сами выполнить
+  каждое общее задание.
 
 ### Сборка
 
@@ -210,6 +224,8 @@ MIT, см. [LICENSE](LICENSE). Tony Hawk's Underground 2 принадлежит 
 
 Сделано под руководством [Claude Opus 5.5](https://www.anthropic.com/claude) в Claude Code, по методике
 [coop-anything](https://github.com/cranebeaker/coop-anything).
+Код для широкого экрана (шире обзор, меню 4:3, исправление вспышки) и раскладка геймпада — из
+[PARTYMOD for THUG2](https://github.com/PARTYMANX/partymod-thug2) от PARTYMANX (MIT).
 
 ### Поддержка
 

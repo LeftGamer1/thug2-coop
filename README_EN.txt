@@ -31,15 +31,23 @@ SETTINGS (coop.ini)
   shared_goals=1    shared goals (see below); 0: a goal is won for both when either one does it.
   player_collision= 1: the skaters knock each other down when they collide; 0 or empty: they ride through.
                     Set it the same on both PCs.
-  [keys] host=F10 / join=F11 / teleport=F12 - the keys: host co-op, join the host, teleport to your friend.
+  [keys] host=F10 / join=F11 / teleport=F12 / leave=F9 - the keys: host co-op, join the host, teleport to your
+                    friend, leave co-op (press it twice).
                     F1-F24, A-Z, 0-9, Num0-Num9, Insert, Delete, Home, End, PageUp, PageDown, Pause,
                     ScrollLock, with Ctrl+ / Shift+ / Alt+ in front if you like (Ctrl+F10); none: no key.
                     Avoid F1-F4 (taunts) and Enter (chat).
-  [display] resolution=1920x1080 - the game's resolution (2560x1440, 1280x720...); in full screen your monitor
-                    must support it. launcher: the one picked in Launcher.exe.
-  [debug] windowed=1 - the game in a window of that resolution (a window too big for the screen is made smaller,
-                    the picture keeps its resolution). Helps if the game crashes on the splash screen.
-                    The rest of [debug] is for debugging, leave it alone.
+  [display] mode=borderless - a window over the whole screen (the default): Alt+Tab, OBS, Discord and overlays
+                    work, and the game keeps running behind other windows. fullscreen: the game's own full
+                    screen. windowed: a window with a frame (too big for the screen: made smaller).
+  [display] resolution=desktop - the picture's size: your monitor's (the default), or 1920x1080, 2560x1440,
+                    3840x2160, 1280x720... Borderless and windowed stretch it over the window (more than the
+                    monitor's is sharper, less is faster); in fullscreen your monitor must support it.
+                    launcher: the one picked in Launcher.exe. On a wide screen the view in the levels is wider
+                    (not stretched); the main menu stays 4:3 with black bars, so its labels sit right.
+  [gamepad] enabled=1 - XInput gamepads (Xbox; PlayStation and others through Steam Input or DS4Windows):
+                    A ollie, X flip, B grab, Y grind, LB / RB spin, LT nollie, RT revert, left stick or d-pad
+                    move, right stick camera, Back view, Start pause. 0: off (the game's own pad support).
+  [debug]           for debugging, leave it alone. (windowed=1 there is the old name of mode=windowed.)
 
 HOW TO PLAY
 -----------
@@ -48,9 +56,12 @@ HOW TO PLAY
   Host:   F10 in the main menu (lobby open), then Story Mode -> Continue / Start New / Load Game Progress.
   Friend: F11 in the main menu - connects and waits until the host starts the story.
   Also later: the host presses F10 in a story level, the friend F11 - the friend joins that level.
-  F12 - teleport to your friend (not while a goal is running).
-  (F10/F11/F12 are the default keys; change them in coop.ini, section [keys].)
-  Enter - chat.
+  F12 - teleport to your friend (not while a goal is running). If a camera of your friend's left you standing
+        still, F12 lets you go.
+  F9 twice - leave co-op: the friend goes back to the main menu with their own story, the host keeps playing
+        alone (the level reloads).
+  (F9/F10/F11/F12 are the default keys; change them in coop.ini, section [keys].)
+  Enter - chat. Enter on an empty line or Esc closes it.
 
 WHAT IS SYNCED
 --------------
@@ -70,36 +81,44 @@ WHAT IS SYNCED
   - Guest characters and the pro teammate: a swap shows for the other player. The host picks the teammate.
   - Your friend's name and distance over their skater, visible through walls.
   - The skaters don't knock each other down. For that, set player_collision=1 in coop.ini on both PCs.
-  - Chat (Enter): the game's fonts have no Cyrillic, so Russian letters are typed transliterated by themselves
-    (Привет -> Privet). No need to switch the keyboard layout.
+  - Chat (Enter): the game's fonts have no Cyrillic, so a Cyrillic letter types the Latin letter on the same key
+    (й -> q): the keys type as on an English layout, no need to switch it.
   - Your own skater's progression (stat challenges) is your own.
 
 LIMITS
 ------
   - Two players at most.
   - Story decisions (moving on to the next chapter, changing level, picking the teammate) are the host's.
-  - Only the host saves the story (saving works while the friend skates). In co-op the friend neither saves
-    nor loads their own story; when the friend leaves co-op, their own story comes back as it was.
+  - The story in co-op is the host's: the host's save keeps it. A save in co-op by the friend saves the friend's
+    own story (as it was before co-op), not the host's; loading is off for the friend in co-op. When the friend
+    leaves co-op, their own story comes back as it was.
+  - World objects are each player's own (a wall one breaks stays whole for the other; the forklift, Phil): that
+    way both players can do every shared goal themselves.
   - If the friend leaves and comes back into the same level, the host's level reloads.
-  - Quitting: friend - pause -> Quit (the host keeps playing, the friend can rejoin with F11).
+  - Quitting: F9 twice (above), or: friend - pause -> Quit (the host keeps playing, the friend can rejoin
+    with F11).
     Host - pause -> Quit: the friend goes back to the main menu too. The host's lobby stays open.
     If the host's game closes or crashes, the friend is taken back to the main menu with a message.
 
 IF IT DOESN'T WORK
 ------------------
-  - The game crashes on the splash screen (Windows 11, 2K resolution): not the mod, plain THEMOD 1.3 does it
-    too. Run it in a window: in coop.ini, section [debug], set windowed=1.
+  - The game crashes on the splash screen: a picture wider than 1920 crashed the game itself (plain THEMOD too);
+    the mod fixes that now. Still crashing? In coop.ini, section [display], try mode=windowed.
   - The game crashes right at start: keep the game folder on a path in Latin letters, not in OneDrive or
     Program Files. Before unpacking: the zip's Properties -> "Unblock". Check that Defender didn't remove
     dinput8.dll. Check that the game starts without dinput8.dll - if not, it isn't the mod.
   - The friend presses F11 and nothing happens: check host_address and that the host's UDP 5153 and TCP 5154
     are reachable (in Porthole: both ports shared and accepted).
-  - Wrong resolution, or the game closes right after the splash screen: put your monitor's resolution in coop.ini,
-    section [display], resolution= (1920x1080 by default). The mod doesn't use Launcher.exe's choice.
+  - The game closes right after the splash screen in mode=fullscreen: the monitor doesn't support the resolution.
+    Use mode=borderless (the default) or your monitor's resolution. The mod doesn't use Launcher.exe's choice.
+  - Recording (OBS, Discord, Nvidia): use mode=borderless (the default). In OBS "Game Capture" or "Window
+    Capture" (method "Windows 10"), window "[THEMOD 1.3.exe]: Tony Hawk's Underground 2". In full screen
+    the capture was lost after Alt+Tab.
   - Music or sound gone: the volume is kept in the save. Set it in Options and save.
 
 TURN THE MOD OFF
 ----------------
   Delete dinput8.dll from the game folder and put your thethug2mod.prx back.
 
-Debug log: coop.log in the game folder. If something breaks, send it.
+Debug log: coop.log in the game folder (kept across starts; past 4 MB the old one becomes coop.prev.log).
+If something breaks, send it.
