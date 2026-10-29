@@ -36,8 +36,8 @@ SETTINGS (coop.ini)
                     F1-F24, A-Z, 0-9, Num0-Num9, Insert, Delete, Home, End, PageUp, PageDown, Pause,
                     ScrollLock, with Ctrl+ / Shift+ / Alt+ in front if you like (Ctrl+F10); none: no key.
                     Avoid F1-F4 (taunts) and Enter (chat).
-  [display] mode=borderless - a window over the whole screen (the default): Alt+Tab, OBS, Discord and overlays
-                    work, and the game keeps running behind other windows. fullscreen: the game's own full
+  [display] mode=borderless - a window over the whole screen (the default): Alt+Tab works
+                    and the game keeps running behind other windows. fullscreen: the game's own full
                     screen. windowed: a window with a frame (too big for the screen: made smaller).
   [display] resolution=desktop - the picture's size: your monitor's (the default), or 1920x1080, 2560x1440,
                     3840x2160, 1280x720... Borderless and windowed stretch it over the window (more than the
@@ -111,9 +111,6 @@ IF IT DOESN'T WORK
     are reachable (in Porthole: both ports shared and accepted).
   - The game closes right after the splash screen in mode=fullscreen: the monitor doesn't support the resolution.
     Use mode=borderless (the default) or your monitor's resolution. The mod doesn't use Launcher.exe's choice.
-  - Recording (OBS, Discord, Nvidia): use mode=borderless (the default). In OBS "Game Capture" or "Window
-    Capture" (method "Windows 10"), window "[THEMOD 1.3.exe]: Tony Hawk's Underground 2". In full screen
-    the capture was lost after Alt+Tab.
   - Music or sound gone: the volume is kept in the save. Set it in Options and save.
 
 TURN THE MOD OFF

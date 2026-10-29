@@ -54,8 +54,8 @@ NPCs, cutscenes, goals.
 - Guest characters and the pro teammate are synced.
 - Optional skater collision (`player_collision=1`).
 - XInput gamepads (Xbox; PlayStation through Steam Input or DS4Windows).
-- Borderless window by default (OBS / Discord capture, Alt+Tab), any resolution up to 4K, a wider (not stretched)
-  view on wide screens, the main menu kept 4:3.
+- Borderless window by default (Alt+Tab works, the game keeps running behind other windows), any resolution up
+  to 4K, a wider (not stretched) view on wide screens, the main menu kept 4:3.
 - Leave co-op with a key (F9 twice); the friend's save in co-op keeps their own story.
 
 ### Install
@@ -153,8 +153,8 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 - Гостевые персонажи и напарник-профи синхронизируются.
 - Коллизия скейтеров по желанию (`player_collision=1`).
 - Геймпады XInput (Xbox; PlayStation — через Steam Input или DS4Windows).
-- Окно без рамки по умолчанию (захват в OBS / Discord, Alt+Tab), любое разрешение до 4K, на широком экране обзор
-  шире (без растяжения), главное меню остаётся 4:3.
+- Окно без рамки по умолчанию (работает Alt+Tab, игра идёт и за другими окнами), любое разрешение до 4K,
+  на широком экране обзор шире (без растяжения), главное меню остаётся 4:3.
 - Выход из кооператива клавишей (F9 дважды); сохранение друга в кооперативе хранит его собственный сюжет.
 
 ### Установка
