@@ -1703,3 +1703,7 @@ script coop_debug_save_test {
     }
     DestroyTemporaryMemCardPools
 }
+script coop_client_quit_unpause {
+    UnpauseGame
+    CoopLog "client: unpaused for the main menu"
+}

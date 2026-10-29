@@ -651,6 +651,9 @@ bool __cdecl LaunchLevelHook(game::CStruct* params, game::CScript* script)
         RestoreOwnCareer();
         g_selfJoined = false;
         link::Close();
+        // Pause > Quit: in co-op the pause menu really pauses the game (the scripts see no network game), and the
+        // main menu's load waited for the pause to end, forever.
+        game::SpawnScript("coop_client_quit_unpause");
     }
     if (g_role == Role::None && !g_hostInLevel) {
         RestoreOwnCareer(); // back at the main menu after co-op as the friend
@@ -1457,6 +1460,7 @@ void __cdecl OnFrame()
         wasConnected = link::Connected();
         Log("link: %s", wasConnected ? "peer connected" : "peer gone");
         if (!wasConnected) {
+            game::SpawnScriptChecksum(0x454E4718, nullptr); // coop_friend_label_hide (their skater stops updating)
             UndoFriendSwap();
             if (g_role == Role::Host)
                 g_clientJoined = false;
@@ -1805,8 +1809,15 @@ void __fastcall NameUpdateHook(void* component, void*)
     }
     if (!object || object == game::LocalSkater())
         return;
-    // not over cutscenes, goal cameras or the pause menu
+    // not over cutscenes, goal cameras or the pause menu, nor for a friend who left (their skater hidden till cleanup)
     static bool hidden = false;
+    if (object == g_deferredSkater || !link::Connected()) {
+        if (!hidden) {
+            hidden = true;
+            game::SpawnScriptChecksum(0x454E4718, nullptr); // coop_friend_label_hide
+        }
+        return;
+    }
     void* movies = MovieManager();
     if ((movies && PlayingMovie(movies)) || *reinterpret_cast<bool*>(0x006FA7D4)) {
         if (!hidden) {
@@ -2032,6 +2043,15 @@ void RemoveDeferredSkater()
 // the friend's put-off one first.
 bool __cdecl LeaveServerHook(game::CStruct* params, game::CScript* script)
 {
+    if (g_role == Role::Client && g_selfJoined) {
+        // The friend quits (pause > Quit: quit_network_game > chosen_leave_server): out of co-op now, before its
+        // SetNetworkMode 0, which co-op would have kept LAN - the main menu then never finished loading.
+        Log("client: leaving the host's game");
+        g_role = Role::None;
+        g_selfJoined = false;
+        link::Close();
+        game::SpawnScript("coop_client_quit_unpause"); // (the pause menu really paused the game in co-op)
+    }
     g_leavingServer = true;
     RemoveDeferredSkater();
     bool result = reinterpret_cast<game::CFunc>(0x005A08D0)(params, script);
