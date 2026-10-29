@@ -4,6 +4,10 @@
 
 💸 [Support the author / Отблагодарить автора](https://www.donationalerts.com/r/leftgamerr)
 
+[![THUG2 Story Co-op: video / видео](https://img.youtube.com/vi/sODbuiHnDqU/maxresdefault.jpg)](https://www.youtube.com/watch?v=sODbuiHnDqU)
+
+▶ [Watch on YouTube / Смотреть на YouTube](https://www.youtube.com/watch?v=sODbuiHnDqU)
+
 <details>
 <summary>Screenshots / Скриншоты</summary>
 
