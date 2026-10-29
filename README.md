@@ -107,6 +107,8 @@ Please attach `coop.log` from the game folder.
   monitor must support it, otherwise the game closes after the splash screen.
 - World objects are each player's own (a wall one breaks stays whole for the other): so both can do each
   shared goal themselves.
+- After a goal, the player who took it may see NPCs standing still that can't be talked to. Harmless, just
+  confusing; not fixed yet.
 
 ### Build
 
@@ -206,6 +208,8 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
   монитор должен поддерживать разрешение, иначе игра закроется после заставки.
 - Объекты мира у каждого свои (стена, сломанная одним, у другого целая): так оба могут сами выполнить
   каждое общее задание.
+- После задания у того, кто его взял, могут остаться стоять NPC-«призраки», с которыми нельзя заговорить.
+  Играть не мешает, только сбивает с толку; пока не исправлено.
 
 ### Сборка
 

@@ -94,6 +94,8 @@ LIMITS
     leaves co-op, their own story comes back as it was.
   - World objects are each player's own (a wall one breaks stays whole for the other; the forklift, Phil): that
     way both players can do every shared goal themselves.
+  - After a goal, the player who took it may see NPCs standing still that can't be talked to ("ghosts").
+    Harmless, just confusing; not fixed yet.
   - If the friend leaves and comes back into the same level, the host's level reloads.
   - Quitting: F9 twice (above), or: friend - pause -> Quit (the host keeps playing, the friend can rejoin
     with F11).
