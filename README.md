@@ -105,12 +105,15 @@ Please attach `coop.log` from the game folder.
 - Display: `coop.ini`, section `[display]`: `mode=borderless` (default), `fullscreen` or `windowed`;
   `resolution=desktop` (default, your monitor's) or `2560x1440`, `3840x2160`, `1280x720`... In `fullscreen` your
   monitor must support it, otherwise the game closes after the splash screen.
-- World objects are each player's own (a wall one breaks stays whole for the other): so both can do each
-  shared goal themselves.
-- The main menu is squeezed to 4:3 with black bars on purpose: stretched to a wide screen, the labels on its wheel
-  slid off their slices. The levels use the whole screen.
 - After a goal, the player who took it may see NPCs standing still that can't be talked to. Harmless, just
   confusing; not fixed yet.
+
+### Not a bug, it's a feature
+
+- The main menu is squeezed to 4:3 with black bars on purpose: stretched to a wide screen, the labels on its wheel
+  slid off their slices. The levels use the whole screen.
+- World objects are each player's own (a wall one breaks stays whole for the other): so both can do each
+  shared goal themselves.
 
 ### Build
 
@@ -208,12 +211,15 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 - Экран: `coop.ini`, раздел `[display]`: `mode=borderless` (по умолчанию), `fullscreen` или `windowed`;
   `resolution=desktop` (по умолчанию, как у монитора) или `2560x1440`, `3840x2160`, `1280x720`... В `fullscreen`
   монитор должен поддерживать разрешение, иначе игра закроется после заставки.
-- Объекты мира у каждого свои (стена, сломанная одним, у другого целая): так оба могут сами выполнить
-  каждое общее задание.
-- Главное меню намеренно сжато до 4:3 с чёрными полосами: растянутое на широкий экран, оно сдвигало надписи
-  на колесе с их секторов. Уровни занимают весь экран.
 - После задания у того, кто его взял, могут остаться стоять NPC-«призраки», с которыми нельзя заговорить.
   Играть не мешает, только сбивает с толку; пока не исправлено.
+
+### Не баг, а фича
+
+- Главное меню намеренно сжато до 4:3 с чёрными полосами: растянутое на широкий экран, оно сдвигало надписи
+  на колесе с их секторов. Уровни занимают весь экран.
+- Объекты мира у каждого свои (стена, сломанная одним, у другого целая): так оба могут сами выполнить
+  каждое общее задание.
 
 ### Сборка
 

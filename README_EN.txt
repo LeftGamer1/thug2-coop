@@ -92,10 +92,6 @@ LIMITS
   - The story in co-op is the host's: the host's save keeps it. A save in co-op by the friend saves the friend's
     own story (as it was before co-op), not the host's; loading is off for the friend in co-op. When the friend
     leaves co-op, their own story comes back as it was.
-  - World objects are each player's own (a wall one breaks stays whole for the other; the forklift, Phil): that
-    way both players can do every shared goal themselves.
-  - The main menu is squeezed to 4:3 with black bars on purpose (stretched, its wheel's labels slid off their
-    slices). The levels use the whole screen.
   - After a goal, the player who took it may see NPCs standing still that can't be talked to ("ghosts").
     Harmless, just confusing; not fixed yet.
   - If the friend leaves and comes back into the same level, the host's level reloads.
@@ -103,6 +99,13 @@ LIMITS
     with F11).
     Host - pause -> Quit: the friend goes back to the main menu too. The host's lobby stays open.
     If the host's game closes or crashes, the friend is taken back to the main menu with a message.
+
+NOT A BUG, IT'S A FEATURE
+-------------------------
+  - The main menu is squeezed to 4:3 with black bars on purpose (stretched, its wheel's labels slid off their
+    slices). The levels use the whole screen.
+  - World objects are each player's own (a wall one breaks stays whole for the other; the forklift, Phil): that
+    way both players can do every shared goal themselves.
 
 IF IT DOESN'T WORK
 ------------------
