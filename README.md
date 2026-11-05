@@ -119,7 +119,8 @@ Please attach `coop.log` from the game folder.
   confusing; not fixed yet.
 - Traffic (cars, buses, trucks) is each player's own: on your screen your friend may hit a car that isn't there
   (it's somewhere else in your world). Syncing it is very hard (the cars stop for each player's skater, so the two
-  worlds drift apart), so it's left for later.
+  worlds drift apart), so it's left for later. It also keeps goals with vehicles playable: each player has their
+  own (say, a forklift one player grabs on to doesn't drive off at light speed while the other has to chase it).
 
 ### Not a bug, it's a feature
 
@@ -233,7 +234,8 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
   Играть не мешает, только сбивает с толку; пока не исправлено.
 - Машины (легковушки, автобусы, грузовики) у каждого свои: у вас на экране друг может врезаться в машину, которой
   у вас там нет (она в вашем мире в другом месте). Синхронизировать их очень сложно (машины тормозят перед
-  скейтером каждого, и миры расходятся), поэтому пока отложено.
+  скейтером каждого, и миры расходятся), поэтому пока отложено. Заодно это выручает в заданиях с машинами: у каждого
+  своя (например, погрузчик, за который зацепился один, не уезжает со скоростью света, пока второй его догоняет).
 
 ### Не баг, а фича
 

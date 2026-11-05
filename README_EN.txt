@@ -107,6 +107,8 @@ LIMITS
     Harmless, just confusing; not fixed yet.
   - Traffic (cars, buses, trucks) is each player's own: on your screen your friend may hit a car that isn't there.
     Syncing it is very hard (the cars stop for each player's skater, so the worlds drift apart): left for later.
+    It also keeps goals with vehicles playable: each player has their own (say, a forklift one player grabs on
+    to doesn't drive off at light speed while the other has to chase it).
   - If the friend leaves and comes back into the same level, the host's level reloads.
   - Quitting: F9 twice (above), or: friend - pause -> Quit (the host keeps playing, the friend can rejoin
     with F11).
