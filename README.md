@@ -52,7 +52,8 @@ NPCs, cutscenes, goals.
 
 - The friend gets the host's story (chapters, won goals, world flags) on joining and on every level change.
 - Cutscenes and goal cameras play for both; a skip (Esc / num2) by either player skips them for both.
-- Shared goals: a goal one player takes starts for both and is won once both have done it.
+- Shared goals: a goal one player takes starts for both and is won once both have done it. Goals found around the
+  world ("Find Ben Franklin", collecting things) wait for both too: each player does them in their own world.
 - Your friend's name and distance over their skater (visible through walls), teleport to your friend,
   chat (a Cyrillic layout types the Latin letters on the same keys).
 - Guest characters and the pro teammate are synced (while you both play the same guest, your friend shows in
@@ -111,8 +112,7 @@ Please attach `coop.log` from the game folder.
 - Display: `coop.ini`, section `[display]`: `mode=borderless` (default), `fullscreen` or `windowed`;
   `resolution=desktop` (default, your monitor's) or `2560x1440`, `3840x2160`, `1280x720`... In `fullscreen` your
   monitor must support it, otherwise the game closes after the splash screen.
-- Goals found around the world rather than taken from an NPC ("Find Ben Franklin", collecting things...) are won
-  for both as soon as either player does them; only NPC goals wait for both. Syncing those is being looked into.
+- A goal done by one player and still waiting for the friend is dropped when the level changes: do it again there.
 - After a goal, the player who took it may see NPCs standing still that can't be talked to. Harmless, just
   confusing; not fixed yet.
 
@@ -163,7 +163,8 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 
 - Друг получает сюжет хоста (главы, выполненные цели, флаги мира) при входе и при каждой смене уровня.
 - Катсцены и камеры целей идут у обоих, пропуск (Esc / num2) у любого пропускает у обоих.
-- Общие задания: взятое одним задание запускается у обоих и засчитывается, когда его выполнят оба.
+- Общие задания: взятое одним задание запускается у обоих и засчитывается, когда его выполнят оба. Задания,
+  разбросанные по миру («найди Бена Франклина», собрать предметы), тоже ждут обоих: каждый делает их в своём мире.
 - Имя и расстояние над другом (видно сквозь стены), телепорт к другу, чат (на русской раскладке печатаются латинские буквы с тех же клавиш).
 - Гостевые персонажи и напарник-профи синхронизируются (пока вы оба играете одним гостем, друг у вас виден
   в своей модели).
@@ -221,9 +222,7 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 - Экран: `coop.ini`, раздел `[display]`: `mode=borderless` (по умолчанию), `fullscreen` или `windowed`;
   `resolution=desktop` (по умолчанию, как у монитора) или `2560x1440`, `3840x2160`, `1280x720`... В `fullscreen`
   монитор должен поддерживать разрешение, иначе игра закроется после заставки.
-- Задания, которые не берутся у NPC, а разбросаны по миру («найди Бена Франклина», собрать предметы...),
-  засчитываются обоим, как только их выполнит любой; ждут обоих только задания у NPC. Как их синхронизировать,
-  пока думаю.
+- Задание, выполненное одним и ждущее друга, сбрасывается при смене уровня: выполните его там снова.
 - После задания у того, кто его взял, могут остаться стоять NPC-«призраки», с которыми нельзя заговорить.
   Играть не мешает, только сбивает с толку; пока не исправлено.
 

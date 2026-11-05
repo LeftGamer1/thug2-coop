@@ -55,6 +55,7 @@ struct Settings {
     bool mirrorCutscenes = false;
     bool mirrorGoalCameras = true;
     bool sharedGoals = true;
+    bool worldGoals = true; // goals not run together (found around the world, taken alone): won once both did them
     bool automation = false;
     int hostKey = VK_F10;     // [keys] host, join, teleport: virtual key codes, optionally with modifier bits
     int joinKey = VK_F11;
@@ -149,6 +150,7 @@ void LoadSettings()
     g_settings.mirrorCutscenes = GetPrivateProfileIntA("coop", "mirror_cutscenes", 0, path) != 0;
     g_settings.mirrorGoalCameras = GetPrivateProfileIntA("coop", "mirror_goal_cameras", 1, path) != 0;
     g_settings.sharedGoals = GetPrivateProfileIntA("coop", "shared_goals", 1, path) != 0;
+    g_settings.worldGoals = GetPrivateProfileIntA("coop", "world_goals", 1, path) != 0;
     g_settings.automation = GetPrivateProfileIntA("debug", "automation", 0, path) != 0;
     g_settings.playerCollision = GetPrivateProfileIntA("coop", "player_collision", -1, path);
     g_settings.gamepad = GetPrivateProfileIntA("gamepad", "enabled", 1, path) != 0;
@@ -452,6 +454,9 @@ WinGoalFn g_winGoal = nullptr;
 // Shared goals ([coop] shared_goals=1): a goal one player takes from an NPC starts for the other too
 // (goal_accept_trigger in coop.qb), and it's won only once both have done it. The first one's win waits: the goal
 // ends there with a message, the other is told; the second one's win wins it for both.
+// [coop] world_goals=1 does the same for every other goal won in co-op: one found around the world (no NPC: "Find
+// Ben Franklin", collecting) or taken from an NPC by one player alone. Each player's world is their own, so the
+// other player can still do it there; until then the first one's win waits. world_goals=0: won for both at once.
 constexpr uint32_t kGoalIdParam = 0x9982E501; // goal_id
 std::set<uint32_t> g_sharedGoals; // started for both
 std::set<uint32_t> g_localDone;   // done here, waiting for the other player
@@ -489,9 +494,20 @@ void ShareNextStage(uint32_t goal)
         SpawnGoalScript("coop_goal_won_chain", goal);
 }
 
+// CFunc_GoalManager_HasWonGoal (0x00559B80, name=<goal>): the goal is won in this game.
+bool GoalWonHere(uint32_t name)
+{
+    game::CStruct* params = game::NewStruct();
+    game::AddChecksumNamed(params, game::kNameChecksum, name);
+    bool won = reinterpret_cast<game::CFunc>(0x00559B80)(params, nullptr);
+    game::FreeStruct(params);
+    return won;
+}
+
 bool __fastcall WinGoalHook(void* manager, void*, uint32_t name)
 {
-    if (!g_remote && g_settings.sharedGoals && InCoopSession() && g_sharedGoals.count(name)) {
+    bool bothDo = g_settings.sharedGoals && (g_sharedGoals.count(name) || g_settings.worldGoals);
+    if (!g_remote && InCoopSession() && bothDo) {
         if (g_localDone.count(name))
             return true; // already waiting (the goal ends next frame)
         if (!g_peerDone.count(name)) {
@@ -862,6 +878,10 @@ void OnLinkMessage(uint32_t type, const uint8_t* data, uint32_t size)
                 link::Send(link::kGoalWon, &name, sizeof(name));
                 ShareNextStage(name);
                 game::SpawnScript("coop_after_goal_won");
+            } else if (GoalWonHere(name)) {
+                // won here already (before co-op, or by a game with world_goals=0): the other player gets it now
+                Log("goal %08X done by peer, won here already -> peer", name);
+                link::Send(link::kGoalWon, &name, sizeof(name));
             } else {
                 Log("shared goal %08X done by peer", name);
                 g_peerDone.insert(name);
@@ -1434,7 +1454,7 @@ void __cdecl OnFrame()
         SteerBot();
     }
     g_readKeyboard();
-    if (!g_sharedGoals.empty() && !InCoopSession()) {
+    if ((!g_sharedGoals.empty() || !g_localDone.empty()) && !InCoopSession()) {
         // The other player left: a shared goal done here (waiting for them) is won now.
         std::set<uint32_t> done = g_localDone;
         ForgetSharedGoals();

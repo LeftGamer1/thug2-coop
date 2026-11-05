@@ -1478,14 +1478,24 @@ script coop_goal_done_wait {
     if GoalManager_GoalIsActive name=<goal_id> {
         GoalManager_DeactivateGoal name=<goal_id>
     }
-    create_panel_message id=coop_goal_msg text="Goal done! Waiting for your friend to finish it too." pos=(320.0, 120.0) time=6000
+    coop_goal_message goal_id=<goal_id> first="Goal done:" last="Waiting for your friend to do it too"
 }
 script coop_peer_goal_done {
     if GoalManager_GoalIsActive name=<goal_id> {
         create_panel_message id=coop_goal_msg text="Your friend finished this goal - finish it too!" pos=(320.0, 120.0) time=6000
     } else {
-        create_panel_message id=coop_goal_msg text="Your friend finished a shared goal - take it again to finish it too" pos=(320.0, 120.0) time=6000
+        coop_goal_message goal_id=<goal_id> first="Your friend did a goal:" last="Do it too"
     }
+}
+script coop_goal_message {
+    <name> = ""
+    GoalManager_GetGoalParams name=<goal_id>
+    if GotParam view_goals_text {
+        <name> = <view_goals_text>
+    }
+    create_panel_message id=coop_goal_msg text=<first> pos=(320.0, 105.0) time=7000
+    create_panel_message id=coop_goal_msg2 text=<name> pos=(320.0, 124.0) time=7000
+    create_panel_message id=coop_goal_msg3 text=<last> pos=(320.0, 143.0) time=7000
 }
 
 script UnloadAnimsAndCreateMemCardPools {

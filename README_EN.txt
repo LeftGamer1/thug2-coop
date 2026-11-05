@@ -30,6 +30,8 @@ SETTINGS (coop.ini)
   port=5153         the game's port (the story sync's TCP port is the next one, 5154). The same on both PCs.
   name=             your name over your skater (15 letters at most); empty: the game's.
   shared_goals=1    shared goals (see below); 0: a goal is won for both when either one does it.
+  world_goals=1     goals found around the world (or taken by one player alone) also wait for both (see below);
+                    0: won for both when either one does them. Set it the same on both PCs.
   player_collision= 1: the skaters knock each other down when they collide; 0 or empty: they ride through.
                     Set it the same on both PCs.
   [keys] host=F10 / join=F11 / teleport=F12 / leave=F9 - the keys: host co-op, join the host, teleport to your
@@ -79,6 +81,10 @@ WHAT IS SYNCED
     A player busy with a goal of their own isn't pulled into it.
     If the friend leaves the game, the waiting player gets the goal right away.
     shared_goals=0 - as before: won for both when either one does it.
+  - Goals found around the world, without an NPC ("Find Ben Franklin", collecting things), and goals one player
+    takes alone (world_goals=1, the default): each player does them in their own world. Whoever does it first sees
+    "Goal done: ... Waiting for your friend", the friend "Your friend did a goal: ... Do it too"; once both have
+    done it, it's won for both. If the friend leaves, the waiting player gets it right away.
   - Guest characters and the pro teammate: a swap shows for the other player. The host picks the teammate.
     While you both play the same guest, your friend shows in their own look on your screen.
   - Your friend's name and distance over their skater, visible through walls.
@@ -94,8 +100,7 @@ LIMITS
   - The story in co-op is the host's: the host's save keeps it. A save in co-op by the friend saves the friend's
     own story (as it was before co-op), not the host's; loading is off for the friend in co-op. When the friend
     leaves co-op, their own story comes back as it was.
-  - Goals found around the world rather than taken from an NPC ("Find Ben Franklin", collecting things...)
-    are won for both as soon as either player does them; only NPC goals wait for both. Being looked into.
+  - A goal done by one player and still waiting for the friend is dropped when the level changes: do it again.
   - After a goal, the player who took it may see NPCs standing still that can't be talked to ("ghosts").
     Harmless, just confusing; not fixed yet.
   - If the friend leaves and comes back into the same level, the host's level reloads.
