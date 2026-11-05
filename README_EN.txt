@@ -13,6 +13,7 @@ The mod runs on top of THEMOD 1.3; it doesn't have to be installed first - the a
        dinput8.dll, coop.ini, patch_themod.bat, patch_themod.ps1
        Data\pre\thethug2mod.prx  -> Data\pre\
      No "THEMOD 1.3.exe"? Run patch_themod.bat: it makes it from your THUG2.exe (THUG2.exe stays as it is).
+     A THUG2.exe that already has some of THEMOD's changes (a repack, another mod) is fine too.
      That's what THEMOD 1.3's installer does, and the installer can't be found anywhere now.
      Start the game with "THEMOD 1.3.exe".
   3. In coop.ini set name= (both) and host_address= (the friend only), see SETTINGS below.
@@ -79,6 +80,7 @@ WHAT IS SYNCED
     If the friend leaves the game, the waiting player gets the goal right away.
     shared_goals=0 - as before: won for both when either one does it.
   - Guest characters and the pro teammate: a swap shows for the other player. The host picks the teammate.
+    While you both play the same guest, your friend shows in their own look on your screen.
   - Your friend's name and distance over their skater, visible through walls.
   - The skaters don't knock each other down. For that, set player_collision=1 in coop.ini on both PCs.
   - Chat (Enter): the game's fonts have no Cyrillic, so a Cyrillic letter types the Latin letter on the same key
@@ -92,6 +94,8 @@ LIMITS
   - The story in co-op is the host's: the host's save keeps it. A save in co-op by the friend saves the friend's
     own story (as it was before co-op), not the host's; loading is off for the friend in co-op. When the friend
     leaves co-op, their own story comes back as it was.
+  - Goals found around the world rather than taken from an NPC ("Find Ben Franklin", collecting things...)
+    are won for both as soon as either player does them; only NPC goals wait for both. Being looked into.
   - After a goal, the player who took it may see NPCs standing still that can't be talked to ("ghosts").
     Harmless, just confusing; not fixed yet.
   - If the friend leaves and comes back into the same level, the host's level reloads.

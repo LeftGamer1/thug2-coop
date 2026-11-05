@@ -49,23 +49,39 @@ if ($bytes.Length -ne $size) {
 }
 $known = (Sha $bytes) -eq $srcSha
 
+# Each place holds either THUG2's bytes (patched now) or THEMOD's already (left as they are: some exes come with the
+# save checksum check already off, from a repack or another mod). Anything else: an unknown exe, nothing is written.
+$already = 0
 foreach ($p in $patches) {
     $old = Hex $p[1]
     $new = Hex $p[2]
+    $isOld = $true
+    $isNew = $true
     for ($i = 0; $i -lt $old.Length; $i++) {
-        if ($bytes[$p[0] + $i] -ne $old[$i]) {
-            Done ('THUG2.exe differs at 0x{0:X}: an unknown or already patched version. / THUG2.exe ne podhodit (izmenyon ili drugaya versiya).' -f ($p[0] + $i)) 1
-        }
+        if ($bytes[$p[0] + $i] -ne $old[$i]) { $isOld = $false }
+        if ($bytes[$p[0] + $i] -ne $new[$i]) { $isNew = $false }
+    }
+    if ($isNew -and -not $isOld) {
+        $already++
+        continue
+    }
+    if (-not $isOld) {
+        for ($i = 0; $i -lt $old.Length -and $bytes[$p[0] + $i] -eq $old[$i]; $i++) { }
+        Done ('THUG2.exe differs at 0x{0:X}: an unknown version. / THUG2.exe ne podhodit (izmenyon ili drugaya versiya).' -f ($p[0] + $i)) 1
     }
     [Array]::Copy($new, 0, $bytes, $p[0], $new.Length)
 }
 
 [IO.File]::WriteAllBytes($dst, $bytes)
-if ($known -and (Sha $bytes) -ne $dstSha) {
+$exact = (Sha $bytes) -eq $dstSha
+if ($known -and -not $exact) {
     Remove-Item -LiteralPath $dst
     Done 'Internal error: the result does not match THEMOD 1.3. / Oshibka: rezultat ne sovpal s THEMOD 1.3.' 1
 }
-if (-not $known) {
+if ($already -gt 0) {
+    Write-Host "Note: $already of $($patches.Count) places in THUG2.exe already had THEMOD's bytes; left as they were."
+}
+if (-not $exact) {
     Write-Host 'Note: THUG2.exe is not the known retail version, but all patched bytes matched.'
 }
 Done '"THEMOD 1.3.exe" created. / "THEMOD 1.3.exe" sozdan.' 0

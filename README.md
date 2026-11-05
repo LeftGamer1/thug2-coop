@@ -55,7 +55,8 @@ NPCs, cutscenes, goals.
 - Shared goals: a goal one player takes starts for both and is won once both have done it.
 - Your friend's name and distance over their skater (visible through walls), teleport to your friend,
   chat (a Cyrillic layout types the Latin letters on the same keys).
-- Guest characters and the pro teammate are synced.
+- Guest characters and the pro teammate are synced (while you both play the same guest, your friend shows in
+  their own look on your screen).
 - Optional skater collision (`player_collision=1`).
 - XInput gamepads (Xbox; PlayStation through Steam Input or DS4Windows).
 - Borderless window by default (Alt+Tab works, the game keeps running behind other windows), any resolution up
@@ -77,7 +78,8 @@ the archive has everything for it.
 2. If you have THEMOD already, keep a copy of your `Data\pre\thethug2mod.prx`.
 3. Unpack the archive into the game folder (the one with `THUG2.exe`), replacing files.
 4. No `THEMOD 1.3.exe` there? Run `patch_themod.bat`: it makes it from `THUG2.exe` (which stays as it is).
-   Start the game with `THEMOD 1.3.exe`.
+   Start the game with `THEMOD 1.3.exe`. A `THUG2.exe` that already has some of THEMOD's changes (a repack, another
+   mod) is fine too.
 5. In `coop.ini` set `name=` (both) and `host_address=` (the friend only).
 6. The host's UDP 5153 and TCP 5154 must be reachable (Radmin VPN / ZeroTier / Porthole).
 
@@ -109,6 +111,8 @@ Please attach `coop.log` from the game folder.
 - Display: `coop.ini`, section `[display]`: `mode=borderless` (default), `fullscreen` or `windowed`;
   `resolution=desktop` (default, your monitor's) or `2560x1440`, `3840x2160`, `1280x720`... In `fullscreen` your
   monitor must support it, otherwise the game closes after the splash screen.
+- Goals found around the world rather than taken from an NPC ("Find Ben Franklin", collecting things...) are won
+  for both as soon as either player does them; only NPC goals wait for both. Syncing those is being looked into.
 - After a goal, the player who took it may see NPCs standing still that can't be talked to. Harmless, just
   confusing; not fixed yet.
 
@@ -161,7 +165,8 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 - Катсцены и камеры целей идут у обоих, пропуск (Esc / num2) у любого пропускает у обоих.
 - Общие задания: взятое одним задание запускается у обоих и засчитывается, когда его выполнят оба.
 - Имя и расстояние над другом (видно сквозь стены), телепорт к другу, чат (на русской раскладке печатаются латинские буквы с тех же клавиш).
-- Гостевые персонажи и напарник-профи синхронизируются.
+- Гостевые персонажи и напарник-профи синхронизируются (пока вы оба играете одним гостем, друг у вас виден
+  в своей модели).
 - Коллизия скейтеров по желанию (`player_collision=1`).
 - Геймпады XInput (Xbox; PlayStation — через Steam Input или DS4Windows).
 - Окно без рамки по умолчанию (работает Alt+Tab, игра идёт и за другими окнами), любое разрешение до 4K,
@@ -183,7 +188,8 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 2. Если THEMOD уже стоит — сохраните свой `Data\pre\thethug2mod.prx`.
 3. Распакуйте архив в папку игры (где лежит `THUG2.exe`) с заменой.
 4. Нет `THEMOD 1.3.exe`? Запустите `patch_themod.bat`: он сделает его из `THUG2.exe` (сам `THUG2.exe` не меняется).
-   Игру запускайте через `THEMOD 1.3.exe`.
+   Игру запускайте через `THEMOD 1.3.exe`. `THUG2.exe`, в котором часть изменений THEMOD уже есть (репак,
+   другой мод), тоже подойдёт.
 5. В `coop.ini` впишите `name=` (оба) и `host_address=` (только друг).
 6. У хоста должны быть доступны UDP 5153 и TCP 5154 (Radmin VPN / ZeroTier / Porthole).
 
@@ -215,6 +221,9 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 - Экран: `coop.ini`, раздел `[display]`: `mode=borderless` (по умолчанию), `fullscreen` или `windowed`;
   `resolution=desktop` (по умолчанию, как у монитора) или `2560x1440`, `3840x2160`, `1280x720`... В `fullscreen`
   монитор должен поддерживать разрешение, иначе игра закроется после заставки.
+- Задания, которые не берутся у NPC, а разбросаны по миру («найди Бена Франклина», собрать предметы...),
+  засчитываются обоим, как только их выполнит любой; ждут обоих только задания у NPC. Как их синхронизировать,
+  пока думаю.
 - После задания у того, кто его взял, могут остаться стоять NPC-«призраки», с которыми нельзя заговорить.
   Играть не мешает, только сбивает с толку; пока не исправлено.
 

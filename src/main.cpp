@@ -187,6 +187,8 @@ void* g_deferredSkater = nullptr; // the friend's skater, its removal put off to
 bool g_inCleanup = false;
 bool g_leavingServer = false;
 uint32_t g_friendSwap[2] = {0, 0}; // the friend's skater's model swap here: skater id + 1, other object id
+uint32_t g_friendWears[2] = {0, 0}; // the swap the friend made in their game (skater id + 1, other id), shown or not
+uint32_t g_localWears = 0;          // the object whose model this player's skater wears (a guest's ped), 0 none
 bool g_haveCareer = false; // client: the host's career arrived
 bool g_joinNow = false;    // client: the host said its game is up
 bool g_clientJoined = false; // host: the client has joined the game
@@ -635,6 +637,8 @@ bool __cdecl CleanupHook(game::CStruct* params, game::CScript* script)
 bool __cdecl LaunchLevelHook(game::CStruct* params, game::CScript* script)
 {
     g_friendSwap[0] = 0; // (undone at the level's Cleanup already)
+    g_friendWears[0] = 0;
+    g_localWears = 0;
     if (g_role != Role::None) {
         g_resetPlaybackAt[0] = GetTickCount() + 4000;
         g_resetPlaybackAt[1] = GetTickCount() + 12000;
@@ -1462,6 +1466,7 @@ void __cdecl OnFrame()
         if (!wasConnected) {
             game::SpawnScriptChecksum(0x454E4718, nullptr); // coop_friend_label_hide (their skater stops updating)
             UndoFriendSwap();
+            g_friendWears[0] = 0;
             if (g_role == Role::Host)
                 g_clientJoined = false;
         }
@@ -1646,6 +1651,9 @@ constexpr uintptr_t kSwapObjectModelsEntry = 0x00681950;
 constexpr uintptr_t kCFuncSwapObjectModels = 0x005B34A0;
 constexpr uint32_t kObj1 = 0x9A2DD8A1, kObj2 = 0x0324891B; // obj_1, obj_2
 
+void UndoFriendSwap();
+void ShowFriendSwap();
+
 bool __cdecl SwapObjectModelsHook(game::CStruct* params, game::CScript* script)
 {
     uint32_t id1 = 0, id2 = 0;
@@ -1653,14 +1661,24 @@ bool __cdecl SwapObjectModelsHook(game::CStruct* params, game::CScript* script)
     game::GetChecksumNamed(params, kObj2, &id2);
     void* a = game::ObjectById(id1);
     void* b = game::ObjectById(id2);
-    bool swapped = reinterpret_cast<game::CFunc>(kCFuncSwapObjectModels)(params, script);
     void* local = game::LocalSkater();
+    bool localSwap = !IsRemote(script) && local && a && b && (a == local || b == local);
+    uint32_t otherId = localSwap ? game::ObjectId(a == local ? b : a) : 0;
+    // The friend's skater may wear this ped's model here (their swap, mirrored): give it back first, or this player
+    // would take the friend's model instead of the guest's.
+    if (localSwap && g_friendSwap[0] && g_friendSwap[1] == otherId)
+        UndoFriendSwap();
+    bool swapped = reinterpret_cast<game::CFunc>(kCFuncSwapObjectModels)(params, script);
+    if (localSwap && swapped) {
+        g_localWears = g_localWears == otherId ? 0 : otherId;
+        ShowFriendSwap();
+    }
     // (not during cutscenes and goal cameras: the pro intro swaps models back and forth for the show)
     void* movies = MovieManager();
     bool presenting = movies && PlayingMovie(movies);
-    if (swapped && !presenting && !IsRemote(script) && local && a && b && g_role != Role::None && link::Connected() &&
-        (g_clientJoined || g_selfJoined) && (a == local || b == local)) {
-        uint32_t ids[2] = {game::ObjectId(local), game::ObjectId(a == local ? b : a)};
+    if (swapped && !presenting && localSwap && g_role != Role::None && link::Connected() &&
+        (g_clientJoined || g_selfJoined)) {
+        uint32_t ids[2] = {game::ObjectId(local), otherId};
         Log("swap skater %u <-> %08X -> peer", ids[0], ids[1]);
         link::Send(link::kSwapModels, ids, sizeof(ids));
     }
@@ -1704,8 +1722,16 @@ void UndoFriendSwap()
     Log("friend's skater %u: swap with %08X undone", skater, other);
 }
 
-void SwapRemote(uint32_t skaterId, uint32_t otherId)
+// The friend's swap, mirrored here unless this player wears the same ped's model (one ped, two players: then the
+// friend shows in their own model here, and wears the guest again once this player swaps back).
+void ShowFriendSwap()
 {
+    bool want = g_friendWears[0] && g_friendWears[1] != g_localWears;
+    if (g_friendSwap[0] && (!want || g_friendSwap[0] != g_friendWears[0] || g_friendSwap[1] != g_friendWears[1]))
+        UndoFriendSwap();
+    if (!want || g_friendSwap[0])
+        return;
+    uint32_t skaterId = g_friendWears[0] - 1, otherId = g_friendWears[1];
     if (!game::ObjectById(skaterId) || !game::ObjectById(otherId)) {
         Log("swap from peer: object missing (%u, %08X)", skaterId, otherId);
         return;
@@ -1719,12 +1745,20 @@ void SwapRemote(uint32_t skaterId, uint32_t otherId)
     game::FreeStruct(params);
     ForgetSwapRecords(skaterId, otherId);
     Log("swap from peer: skater %u <-> %08X %s", skaterId, otherId, ok ? "done" : "failed");
-    if (ok) { // a second swap with the same object puts it back
-        if (g_friendSwap[0] == skaterId + 1 && g_friendSwap[1] == otherId)
-            g_friendSwap[0] = 0;
-        else
-            g_friendSwap[0] = skaterId + 1, g_friendSwap[1] = otherId;
-    }
+    if (ok)
+        g_friendSwap[0] = skaterId + 1, g_friendSwap[1] = otherId;
+}
+
+void SwapRemote(uint32_t skaterId, uint32_t otherId)
+{
+    // a second swap with the same object puts it back
+    if (g_friendWears[0] == skaterId + 1 && g_friendWears[1] == otherId)
+        g_friendWears[0] = 0;
+    else
+        g_friendWears[0] = skaterId + 1, g_friendWears[1] = otherId;
+    if (g_friendWears[0] && g_friendWears[1] == g_localWears)
+        Log("swap from peer: skater %u <-> %08X not shown (this player wears that model)", skaterId, otherId);
+    ShowFriendSwap();
 }
 
 // --- the friend's name -------------------------------------------------------------------------------------------
