@@ -117,6 +117,9 @@ Please attach `coop.log` from the game folder.
 - A goal done by one player and still waiting for the friend is dropped when the level changes: do it again there.
 - After a goal, the player who took it may see NPCs standing still that can't be talked to. Harmless, just
   confusing; not fixed yet.
+- Traffic (cars, buses, trucks) is each player's own: on your screen your friend may hit a car that isn't there
+  (it's somewhere else in your world). Syncing it is very hard (the cars stop for each player's skater, so the two
+  worlds drift apart), so it's left for later.
 
 ### Not a bug, it's a feature
 
@@ -228,6 +231,9 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 - Задание, выполненное одним и ждущее друга, сбрасывается при смене уровня: выполните его там снова.
 - После задания у того, кто его взял, могут остаться стоять NPC-«призраки», с которыми нельзя заговорить.
   Играть не мешает, только сбивает с толку; пока не исправлено.
+- Машины (легковушки, автобусы, грузовики) у каждого свои: у вас на экране друг может врезаться в машину, которой
+  у вас там нет (она в вашем мире в другом месте). Синхронизировать их очень сложно (машины тормозят перед
+  скейтером каждого, и миры расходятся), поэтому пока отложено.
 
 ### Не баг, а фича
 

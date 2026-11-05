@@ -105,6 +105,8 @@ LIMITS
   - A goal done by one player and still waiting for the friend is dropped when the level changes: do it again.
   - After a goal, the player who took it may see NPCs standing still that can't be talked to ("ghosts").
     Harmless, just confusing; not fixed yet.
+  - Traffic (cars, buses, trucks) is each player's own: on your screen your friend may hit a car that isn't there.
+    Syncing it is very hard (the cars stop for each player's skater, so the worlds drift apart): left for later.
   - If the friend leaves and comes back into the same level, the host's level reloads.
   - Quitting: F9 twice (above), or: friend - pause -> Quit (the host keeps playing, the friend can rejoin
     with F11).
