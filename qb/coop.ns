@@ -361,6 +361,32 @@ script coop_debug_introcams {
     PlayIntroCameras <...>
     CoopLog "debug: intro cams done"
 }
+script coop_spectate_on {
+    skater:DisablePlayerInput
+    if ScreenElementExists id=coop_spectate_text {
+        SetScreenElementProps id=coop_spectate_text text=<text>
+    } else {
+        SetScreenElementLock id=root_window OFF
+        CreateScreenElement {
+            Type=TextElement
+            parent=root_window
+            id=coop_spectate_text
+            font=small
+            text=<text>
+            pos=(320.0, 440.0)
+            just=[center bottom]
+            scale=0.9
+            rgba=[90 170 255 110]
+            z_priority=3
+        }
+    }
+}
+script coop_spectate_off {
+    if ScreenElementExists id=coop_spectate_text {
+        DestroyScreenElement id=coop_spectate_text
+    }
+    skater:EnablePlayerInput
+}
 script coop_friend_label_hide {
     if ScreenElementExists id=coop_friend_name {
         DestroyScreenElement id=coop_friend_name

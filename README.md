@@ -54,7 +54,8 @@ NPCs, cutscenes, goals.
 - Cutscenes and goal cameras play for both; a skip (Esc / num2) by either player skips them for both.
 - Shared goals: a goal one player takes starts for both and is won once both have done it. Goals found around the
   world ("Find Ben Franklin", collecting things) wait for both too: each player does them in their own world.
-- Your friend's name and distance over their skater (visible through walls), teleport to your friend,
+- Your friend's name and distance over their skater (visible through walls), teleport to your friend, watch your
+  friend (your camera on their skater),
   chat (a Cyrillic layout types the Latin letters on the same keys).
 - Guest characters and the pro teammate are synced (while you both play the same guest, your friend shows in
   their own look on your screen).
@@ -94,6 +95,7 @@ Details: [README_EN.txt](README_EN.txt) (settings, controls, limits, troubleshoo
 | F11 | friend: join |
 | F12 | teleport to your friend |
 | F9 twice | leave co-op |
+| F7 | watch your friend (again: your own camera back) |
 | Enter | chat (Enter on an empty line or Esc closes it) |
 
 The keys can be changed in `coop.ini`, section `[keys]`. Gamepad: A ollie, X flip, B grab, Y grind, LB / RB spin,
@@ -165,7 +167,7 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 - Катсцены и камеры целей идут у обоих, пропуск (Esc / num2) у любого пропускает у обоих.
 - Общие задания: взятое одним задание запускается у обоих и засчитывается, когда его выполнят оба. Задания,
   разбросанные по миру («найди Бена Франклина», собрать предметы), тоже ждут обоих: каждый делает их в своём мире.
-- Имя и расстояние над другом (видно сквозь стены), телепорт к другу, чат (на русской раскладке печатаются латинские буквы с тех же клавиш).
+- Имя и расстояние над другом (видно сквозь стены), телепорт к другу, слежка за другом (ваша камера на его скейтере), чат (на русской раскладке печатаются латинские буквы с тех же клавиш).
 - Гостевые персонажи и напарник-профи синхронизируются (пока вы оба играете одним гостем, друг у вас виден
   в своей модели).
 - Коллизия скейтеров по желанию (`player_collision=1`).
@@ -204,6 +206,7 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 | F11 | друг: подключиться |
 | F12 | телепорт к другу |
 | F9 дважды | выйти из кооператива |
+| F7 | смотреть за другом (ещё раз: своя камера) |
 | Enter | чат (Enter на пустой строке или Esc закрывают его) |
 
 Клавиши меняются в `coop.ini`, раздел `[keys]`. Геймпад: A — ollie, X — flip, B — grab, Y — grind, LB / RB —

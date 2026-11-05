@@ -61,6 +61,7 @@ struct Settings {
     int joinKey = VK_F11;
     int teleportKey = VK_F12;
     int leaveKey = VK_F9;
+    int spectateKey = VK_F7;  // [keys] spectate: the camera on the friend's skater and back
     int playerCollision = -1; // skaters knock each other down: 1 on, 0 off, -1 the game's network option
     int screenWidth = 0;      // [display] resolution (desktop: the monitor's); 0: Launcher.exe's choice
     int screenHeight = 0;
@@ -158,6 +159,7 @@ void LoadSettings()
     g_settings.joinKey = KeySetting("join", VK_F11, path);
     g_settings.teleportKey = KeySetting("teleport", VK_F12, path);
     g_settings.leaveKey = KeySetting("leave", VK_F9, path);
+    g_settings.spectateKey = KeySetting("spectate", VK_F7, path);
     char text[32];
     GetPrivateProfileStringA("display", "mode", g_settings.windowed ? "windowed" : "borderless", text, sizeof(text), path);
     g_settings.displayMode = _stricmp(text, "fullscreen") == 0 ? 0 : _stricmp(text, "windowed") == 0 ? 2 : 1;
@@ -650,8 +652,15 @@ bool __cdecl CleanupHook(game::CStruct* params, game::CScript* script)
     return result;
 }
 
+void* g_spectated = nullptr; // [keys] spectate: the friend's skater the camera is on
+void ToggleSpectate();
+void StopSpectate(const char* why);
+void SpectateFrame();
+
 bool __cdecl LaunchLevelHook(game::CStruct* params, game::CScript* script)
 {
+    if (g_spectated)
+        StopSpectate("level change");
     g_friendSwap[0] = 0; // (undone at the level's Cleanup already)
     g_friendWears[0] = 0;
     g_localWears = 0;
@@ -780,6 +789,8 @@ bool __cdecl PlaySkaterCamAnimHook(game::CStruct* params, game::CScript* script)
     uint32_t name = 0;
     if (params)
         game::GetChecksumNamed(params, game::kNameChecksum, &name);
+    if (g_spectated)
+        StopSpectate("camera");
     if (IsRemote(script)) {
         void* movies = MovieManager();
         if (name && movies && PlayingMovie(movies) == name)
@@ -1528,8 +1539,14 @@ void __cdecl OnFrame()
         Log("host key: coop_host_start");
         game::SpawnScript("coop_host_start");
     }
+    static bool f7;
+    if (Pressed(g_settings.spectateKey, f7) && focus && g_role != Role::None)
+        ToggleSpectate();
+    SpectateFrame();
     static bool f12;
     if (Pressed(g_settings.teleportKey, f12) && focus && g_role != Role::None) {
+        if (g_spectated)
+            StopSpectate("teleport");
         Log("teleport key: coop_teleport_request");
         game::SpawnScript("coop_teleport_request");
     }
@@ -1808,6 +1825,123 @@ void RemoveLabel(uint32_t label)
     game::FreeStruct(params);
 }
 
+// --- watching the friend ([keys] spectate) -------------------------------------------------------------------------
+
+// The player's camera (skatercam0) put on the friend's skater the way a network game's observer mode does it
+// (GameNet::Manager::ObservePlayer 0x0053A910): its skater camera onto that skater (SetSkater 0x004FA3C0), the walk
+// camera off (SetSkater 0x00524C50 with none) and suspended. The local skater waits with its input off; the key again,
+// a teleport, a goal camera, the level changing or the friend gone gives the camera back the same way.
+constexpr uint32_t kSkaterCameraType = 0x5E43A604, kWalkCameraType = 0xC7D37EC2, kPhysicsControlType = 0xD9151D4D,
+                   kSkaterStateType = 0x43686585;
+void SuspendComponent(void* component, bool suspend)
+{
+    void** vtable = *static_cast<void***>(component);
+    reinterpret_cast<void(__thiscall*)(void*, bool)>(vtable[7])(component, suspend);
+}
+
+void* FriendSkater()
+{
+    void* local = game::LocalSkater();
+    for (uint32_t id = 0; id < 2; ++id) {
+        void* o = game::ObjectById(id);
+        if (o && o != local && o != g_deferredSkater)
+            return o;
+    }
+    return nullptr;
+}
+
+// The camera onto `skater`: the friend's, or the local one (walk camera too, by what it's doing now).
+bool PointCamera(void* skater, bool local)
+{
+    void* camObject = game::ObjectById(kSkaterCam0);
+    void* skaterCam = camObject ? Component(camObject, kSkaterCameraType) : nullptr;
+    void* walkCam = camObject ? Component(camObject, kWalkCameraType) : nullptr;
+    if (!skaterCam || !walkCam || !skater)
+        return false;
+    reinterpret_cast<void(__thiscall*)(void*, void*)>(0x004FA3C0)(skaterCam, skater);
+    reinterpret_cast<void(__thiscall*)(void*, void*)>(0x00524C50)(walkCam, local ? skater : nullptr);
+    *reinterpret_cast<int*>(static_cast<uint8_t*>(walkCam) + 0x18) = 3; // (frames that jump straight to the target)
+    bool walking = false;
+    if (local) {
+        auto* control = static_cast<uint8_t*>(Component(skater, kPhysicsControlType));
+        auto* state = control ? *reinterpret_cast<uint8_t**>(control + 0x2C) : nullptr;
+        walking = state && (state[0x118] || *reinterpret_cast<int*>(state + 0x1C) != 0);
+    }
+    SuspendComponent(skaterCam, walking);
+    SuspendComponent(walkCam, !walking);
+    if (walking)
+        reinterpret_cast<void(__thiscall*)(void*)>(0x00524C30)(walkCam); // ResetNow
+    return true;
+}
+
+const char* KeyText(int key, char* buffer, size_t size)
+{
+    int vk = key & 0xFF;
+    char name[16];
+    if (vk >= VK_F1 && vk <= VK_F24)
+        std::snprintf(name, sizeof(name), "F%d", vk - VK_F1 + 1);
+    else if ((vk >= '0' && vk <= '9') || (vk >= 'A' && vk <= 'Z'))
+        std::snprintf(name, sizeof(name), "%c", vk);
+    else
+        std::snprintf(name, sizeof(name), "the key");
+    std::snprintf(buffer, size, "%s%s%s%s", key & kWithCtrl ? "Ctrl+" : "", key & kWithShift ? "Shift+" : "",
+        key & kWithAlt ? "Alt+" : "", name);
+    return buffer;
+}
+
+void StopSpectate(const char* why)
+{
+    if (!g_spectated)
+        return;
+    g_spectated = nullptr;
+    void* local = game::LocalSkater();
+    bool ok = local && PointCamera(local, true);
+    game::SpawnScript("coop_spectate_off");
+    Log("spectate: off (%s)%s", why, ok ? "" : ", no camera");
+}
+
+void ToggleSpectate()
+{
+    if (g_spectated) {
+        StopSpectate("key");
+        return;
+    }
+    void* other = FriendSkater();
+    void* movies = MovieManager();
+    if (!other || !link::Connected() || !game::LocalSkater() || (movies && PlayingMovie(movies)) ||
+        *reinterpret_cast<bool*>(0x006FA7D4) || !Component(other, kSkaterStateType)) {
+        Log("spectate: not now (friend %p)", other);
+        game::CStruct* params = game::NewStruct();
+        reinterpret_cast<void(__thiscall*)(game::CStruct*, uint32_t, const char*)>(game::kStructAddString)(
+            params, game::Checksum("text"), "Co-op: your friend can't be watched right now");
+        game::SpawnScriptChecksum(game::Checksum("coop_message"), params);
+        game::FreeStruct(params);
+        return;
+    }
+    if (!PointCamera(other, false)) {
+        Log("spectate: no camera");
+        return;
+    }
+    g_spectated = other;
+    char key[32], text[96];
+    const char* name = reinterpret_cast<const char*(__thiscall*)(void*)>(0x00581580)(other);
+    std::snprintf(text, sizeof(text), "Watching %s - %s: back", name && *name ? name : "your friend",
+        KeyText(g_settings.spectateKey, key, sizeof(key)));
+    game::CStruct* params = game::NewStruct();
+    reinterpret_cast<void(__thiscall*)(game::CStruct*, uint32_t, const char*)>(game::kStructAddString)(
+        params, kText, text);
+    game::SpawnScriptChecksum(game::Checksum("coop_spectate_on"), params);
+    game::FreeStruct(params);
+    Log("spectate: on (%s)", text);
+}
+
+// Once a frame: the friend's skater gone or replaced, or co-op over - the camera back.
+void SpectateFrame()
+{
+    if (g_spectated && (g_role == Role::None || !link::Connected() || FriendSkater() != g_spectated))
+        StopSpectate("friend gone");
+}
+
 // The friend's head on the screen (640x480): false if there's no camera.
 bool ProjectFriend(const float* world, float* sx, float* sy, float* distance)
 {
@@ -1865,7 +1999,7 @@ void __fastcall NameUpdateHook(void* component, void*)
         return;
     // not over cutscenes, goal cameras or the pause menu, nor for a friend who left (their skater hidden till cleanup)
     static bool hidden = false;
-    if (object == g_deferredSkater || !link::Connected()) {
+    if (object == g_deferredSkater || !link::Connected() || g_spectated) {
         if (!hidden) {
             hidden = true;
             game::SpawnScriptChecksum(0x454E4718, nullptr); // coop_friend_label_hide

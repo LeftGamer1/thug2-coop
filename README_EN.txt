@@ -34,8 +34,8 @@ SETTINGS (coop.ini)
                     0: won for both when either one does them. Set it the same on both PCs.
   player_collision= 1: the skaters knock each other down when they collide; 0 or empty: they ride through.
                     Set it the same on both PCs.
-  [keys] host=F10 / join=F11 / teleport=F12 / leave=F9 - the keys: host co-op, join the host, teleport to your
-                    friend, leave co-op (press it twice).
+  [keys] host=F10 / join=F11 / teleport=F12 / leave=F9 / spectate=F7 - the keys: host co-op, join the host,
+                    teleport to your friend, leave co-op (press it twice), watch your friend.
                     F1-F24, A-Z, 0-9, Num0-Num9, Insert, Delete, Home, End, PageUp, PageDown, Pause,
                     ScrollLock, with Ctrl+ / Shift+ / Alt+ in front if you like (Ctrl+F10); none: no key.
                     Avoid F1-F4 (taunts) and Enter (chat).
@@ -63,7 +63,9 @@ HOW TO PLAY
         still, F12 lets you go.
   F9 twice - leave co-op: the friend goes back to the main menu with their own story, the host keeps playing
         alone (the level reloads).
-  (F9/F10/F11/F12 are the default keys; change them in coop.ini, section [keys].)
+  F7 - watch your friend: your camera follows their skater, you wait where you are (no control). F7 again
+        brings your camera back; so do F12, a goal camera or a cutscene, a level change, or the friend leaving.
+  (F7/F9/F10/F11/F12 are the default keys; change them in coop.ini, section [keys].)
   Enter - chat. Enter on an empty line or Esc closes it.
 
 WHAT IS SYNCED
