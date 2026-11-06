@@ -13,7 +13,8 @@ The mod runs on top of THEMOD 1.3; it doesn't have to be installed first - the a
        dinput8.dll, coop.ini, patch_themod.bat, patch_themod.ps1
        Data\pre\thethug2mod.prx  -> Data\pre\
      No "THEMOD 1.3.exe"? Run patch_themod.bat: it makes it from your THUG2.exe (THUG2.exe stays as it is).
-     A THUG2.exe that already has some of THEMOD's changes (a repack, another mod) is fine too.
+     A THUG2.exe that already has some of THEMOD's changes (a repack, another mod) is fine too,
+     and so is the OpenSpy THUG2.exe (online through openspy.net; its online servers stay).
      That's what THEMOD 1.3's installer does, and the installer can't be found anywhere now.
      Start the game with "THEMOD 1.3.exe".
   3. In coop.ini set name= (both) and host_address= (the friend only), see SETTINGS below.

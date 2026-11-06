@@ -9,16 +9,23 @@ $size = 2695168
 $srcSha = '52FC88849654B34839EC2F96BFF3A8C0B7A855DF9A207AAB9F2FCA2E6BD440F3' # THUG2.exe, PC retail
 $dstSha = '25874001BE0C1F12DF47BC8F0DAD61869CAE0FE90964C12245165732A4CBB5EA' # THEMOD 1.3.exe from its installer
 
-# file offset, THUG2.exe bytes, THEMOD 1.3 bytes
+# file offset, THUG2.exe bytes, THEMOD 1.3 bytes; then other known bytes there, from the OpenSpy exe (online through
+# openspy.net): 'patch' writes THEMOD's bytes over them, 'keep' leaves them (OpenSpy's online servers, not needed by THEMOD)
+$openSpyPre = '71625F736372697074732E7072780000416C6C20737461727475702051422066696C657300' # qb_scripts.prx
 $patches = @(
     @(0x1A8A01, '759C', '9090'), # the save's checksum isn't checked
     @(0x1F95BB, '75', 'EB'),     # GameSpy CD key check skipped
     @(0x24CD99, '7567326F6E6C696E652E636F6D2F6D6F74642E64617400687474703A2F2F7777772E74687567326F6E6C696E652E636F6D2F746573746D6F74642E646174', '6D6F64732E636F6D2F6D6F74642E646174000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'),
     @(0x254491, '65', '61'),
-    @(0x257698, '71625F736372697074732E7072650000416C6C20737461727475702051422066696C657300', '74686574687567326D6F642E7072650000416C6C20737461727475702051422066696C6573'), # thethug2mod.pre
-    @(0x267D60, '2E67616D65737079', '312E74686D6F6473'),
-    @(0x268074, '47616D65537079485454502F312E30', '5448454D4F44313300000000000000')
+    @(0x257698, '71625F736372697074732E7072650000416C6C20737461727475702051422066696C657300', '74686574687567326D6F642E7072650000416C6C20737461727475702051422066696C6573', @(,@($openSpyPre, 'patch'))), # thethug2mod.pre
+    @(0x267D60, '2E67616D65737079', '312E74686D6F6473', @(,@('2E6F70656E737079', 'keep'))),
+    @(0x268074, '47616D65537079485454502F312E30', '5448454D4F44313300000000000000', @(,@('4F70656E537079485454502F312E30', 'keep')))
 )
+
+function Same([byte[]]$bytes, [int]$at, [byte[]]$b) {
+    for ($i = 0; $i -lt $b.Length; $i++) { if ($bytes[$at + $i] -ne $b[$i]) { return $false } }
+    return $true
+}
 
 function Hex([string]$s) {
     $b = New-Object byte[] ($s.Length / 2)
@@ -49,25 +56,35 @@ if ($bytes.Length -ne $size) {
 }
 $known = (Sha $bytes) -eq $srcSha
 
-# Each place holds either THUG2's bytes (patched now) or THEMOD's already (left as they are: some exes come with the
-# save checksum check already off, from a repack or another mod). Anything else: an unknown exe, nothing is written.
+# Each place holds THUG2's bytes (patched now), THEMOD's already (left as they are: some exes come with the save
+# checksum check already off, from a repack or another mod) or other known bytes (OpenSpy's: patched or kept, as the
+# table says). Anything else: an unknown exe, nothing is written.
 $already = 0
+$kept = 0
+$openSpy = $false
 foreach ($p in $patches) {
     $old = Hex $p[1]
     $new = Hex $p[2]
-    $isOld = $true
-    $isNew = $true
-    for ($i = 0; $i -lt $old.Length; $i++) {
-        if ($bytes[$p[0] + $i] -ne $old[$i]) { $isOld = $false }
-        if ($bytes[$p[0] + $i] -ne $new[$i]) { $isNew = $false }
-    }
-    if ($isNew -and -not $isOld) {
+    if (Same $bytes $p[0] $new) {
         $already++
         continue
     }
-    if (-not $isOld) {
+    $action = $null
+    if (Same $bytes $p[0] $old) {
+        $action = 'patch'
+    } elseif ($p.Count -gt 3) {
+        foreach ($other in $p[3]) {
+            $alt = Hex $other[0]
+            if ($alt.Length -eq $new.Length -and (Same $bytes $p[0] $alt)) { $action = $other[1]; $openSpy = $true; break }
+        }
+    }
+    if ($null -eq $action) {
         for ($i = 0; $i -lt $old.Length -and $bytes[$p[0] + $i] -eq $old[$i]; $i++) { }
         Done ('THUG2.exe differs at 0x{0:X}: an unknown version. / THUG2.exe ne podhodit (izmenyon ili drugaya versiya).' -f ($p[0] + $i)) 1
+    }
+    if ($action -eq 'keep') {
+        $kept++
+        continue
     }
     [Array]::Copy($new, 0, $bytes, $p[0], $new.Length)
 }
@@ -77,6 +94,9 @@ $exact = (Sha $bytes) -eq $dstSha
 if ($known -and -not $exact) {
     Remove-Item -LiteralPath $dst
     Done 'Internal error: the result does not match THEMOD 1.3. / Oshibka: rezultat ne sovpal s THEMOD 1.3.' 1
+}
+if ($openSpy) {
+    Write-Host "Note: THUG2.exe is the OpenSpy version; $kept of its online places left as they are (OpenSpy's servers)."
 }
 if ($already -gt 0) {
     Write-Host "Note: $already of $($patches.Count) places in THUG2.exe already had THEMOD's bytes; left as they were."

@@ -81,7 +81,7 @@ the archive has everything for it.
 3. Unpack the archive into the game folder (the one with `THUG2.exe`), replacing files.
 4. No `THEMOD 1.3.exe` there? Run `patch_themod.bat`: it makes it from `THUG2.exe` (which stays as it is).
    Start the game with `THEMOD 1.3.exe`. A `THUG2.exe` that already has some of THEMOD's changes (a repack, another
-   mod) is fine too.
+   mod) is fine too, and so is the OpenSpy `THUG2.exe` (online through openspy.net; its online servers stay).
 5. In `coop.ini` set `name=` (both) and `host_address=` (the friend only).
 6. The host's UDP 5153 and TCP 5154 must be reachable (Radmin VPN / ZeroTier / Porthole).
 
@@ -196,7 +196,7 @@ Like the mod? [Support the author](https://www.donationalerts.com/r/leftgamerr)
 3. Распакуйте архив в папку игры (где лежит `THUG2.exe`) с заменой.
 4. Нет `THEMOD 1.3.exe`? Запустите `patch_themod.bat`: он сделает его из `THUG2.exe` (сам `THUG2.exe` не меняется).
    Игру запускайте через `THEMOD 1.3.exe`. `THUG2.exe`, в котором часть изменений THEMOD уже есть (репак,
-   другой мод), тоже подойдёт.
+   другой мод), тоже подойдёт, как и `THUG2.exe` от OpenSpy (онлайн через openspy.net; его серверы остаются).
 5. В `coop.ini` впишите `name=` (оба) и `host_address=` (только друг).
 6. У хоста должны быть доступны UDP 5153 и TCP 5154 (Radmin VPN / ZeroTier / Porthole).
 
